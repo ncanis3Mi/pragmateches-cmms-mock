@@ -9,7 +9,7 @@ export default function LoginPage() {
             Pragmateches CMMS
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Computer Maintenance Management System
+            Computerized Maintenance Management System
           </p>
         </div>
         <LoginForm />

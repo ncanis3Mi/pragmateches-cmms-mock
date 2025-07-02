@@ -1,6 +1,7 @@
 # Pragmateches CMMS Mock
 
-Computer Maintenance Management System Mock Application
+Computerized Management System Mock Application
+（設備保全管理システムのモック）
 
 ## 技術スタック
 

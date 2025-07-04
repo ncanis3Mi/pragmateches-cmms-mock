@@ -5,14 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Brain, Loader2, AlertCircle, TrendingUp, CheckCircle } from "lucide-react"
-import { precisionEquipmentData, rotatingEquipmentData, electricalData, instrumentationData } from "@/types/inspection"
+import { supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
 
 const dataCategories = [
-  { value: "precision", label: "精機器", data: precisionEquipmentData },
-  { value: "rotating", label: "回転機", data: rotatingEquipmentData },
-  { value: "electrical", label: "電気", data: electricalData },
-  { value: "instrumentation", label: "計装", data: instrumentationData },
+  { value: "precision", label: "精機器", typeId: 1 },
+  { value: "rotating", label: "回転機", typeId: 2 },
+  { value: "electrical", label: "電気", typeId: 3 },
+  { value: "instrumentation", label: "計装", typeId: 4 },
 ]
 
 export default function InsightsAnalysisPage() {
@@ -31,10 +31,25 @@ export default function InsightsAnalysisPage() {
     setError("")
     setInsights("")
 
-    const selectedData = dataCategories.find(c => c.value === selectedCategory)?.data
-    const categoryLabel = dataCategories.find(c => c.value === selectedCategory)?.label
+    const selectedCategory_info = dataCategories.find(c => c.value === selectedCategory)
+    const categoryLabel = selectedCategory_info?.label
 
     try {
+      // Fetch real data from Supabase
+      const { data: equipmentData, error } = await supabase
+        .from('equipment')
+        .select(`
+          *,
+          equipment_type_master("設備種別名"),
+          maintenance_history(*),
+          anomaly_report(*),
+          inspection_plan(*)
+        `)
+        .eq('設備種別ID', selectedCategory_info?.typeId)
+      
+      if (error) throw error
+      const filteredData = equipmentData || []
+
       const response = await fetch("/api/chatgpt", {
         method: "POST",
         headers: {
@@ -48,7 +63,7 @@ export default function InsightsAnalysisPage() {
           3. 異常パターンの有無
           4. 推奨される保守アクション
           5. 今後の監視ポイント`,
-          data: selectedData,
+          data: filteredData,
         }),
       })
 

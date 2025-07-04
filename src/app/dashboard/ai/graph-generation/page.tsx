@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { BarChart3, Loader2 } from "lucide-react"
-import { precisionEquipmentData, rotatingEquipmentData, electricalData, instrumentationData } from "@/types/inspection"
+import { supabase } from "@/lib/supabase"
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -34,10 +34,10 @@ ChartJS.register(
 )
 
 const dataCategories = [
-  { value: "precision", label: "精機器", data: precisionEquipmentData },
-  { value: "rotating", label: "回転機", data: rotatingEquipmentData },
-  { value: "electrical", label: "電気", data: electricalData },
-  { value: "instrumentation", label: "計装", data: instrumentationData },
+  { value: "precision", label: "精機器", typeId: 1 },
+  { value: "rotating", label: "回転機", typeId: 2 },
+  { value: "electrical", label: "電気", typeId: 3 },
+  { value: "instrumentation", label: "計装", typeId: 4 },
 ]
 
 // Helper function to extract chart configurations from AI response
@@ -76,9 +76,24 @@ export default function GraphGenerationPage() {
     setError("")
     setGraphConfig(null)
 
-    const selectedData = dataCategories.find(c => c.value === selectedCategory)?.data
-
+    const selectedCategory_info = dataCategories.find(c => c.value === selectedCategory)
+    
     try {
+      // Fetch real data from Supabase
+      const { data: equipmentData, error } = await supabase
+        .from('equipment')
+        .select(`
+          *,
+          equipment_type_master("設備種別名"),
+          maintenance_history(*),
+          anomaly_report(*),
+          inspection_plan(*)
+        `)
+        .eq('設備種別ID', selectedCategory_info?.typeId)
+      
+      if (error) throw error
+      const filteredData = equipmentData || []
+
       const response = await fetch("/api/chatgpt", {
         method: "POST",
         headers: {
@@ -87,7 +102,7 @@ export default function GraphGenerationPage() {
         body: JSON.stringify({
           type: "graph",
           prompt: graphRequest,
-          data: selectedData,
+          data: filteredData,
         }),
       })
 

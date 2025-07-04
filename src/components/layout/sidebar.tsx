@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ClipboardCheck, ChevronRight } from "lucide-react"
+import { ClipboardCheck, ChevronRight, BarChart3, Brain } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
 
@@ -26,6 +26,20 @@ const menuItems = [
       {
         title: "計装",
         href: "/dashboard/inspection-results/instrumentation",
+      },
+    ],
+  },
+  {
+    title: "AIアシスタント",
+    icon: Brain,
+    subItems: [
+      {
+        title: "グラフ生成",
+        href: "/dashboard/ai/graph-generation",
+      },
+      {
+        title: "インサイト分析",
+        href: "/dashboard/ai/insights-analysis",
       },
     ],
   },

@@ -20,8 +20,13 @@ export async function POST(request: NextRequest) {
     let userPrompt = prompt
 
     if (type === 'graph') {
-      systemPrompt = `You are a data visualization expert. Generate chart configurations for inspection data in Chart.js format. Return ONLY valid JSON configurations wrapped in markdown code blocks (using \`\`\`json). Each chart should include type, data, and options properties. Use the actual data provided to create meaningful visualizations.`
-      userPrompt = `Based on this inspection data: ${JSON.stringify(data)}, ${prompt}. Please analyze the data and create appropriate chart configurations.`
+      systemPrompt = `You are a data visualization expert. Generate chart configurations for inspection data in Chart.js v4 format. Return ONLY valid JSON configurations wrapped in markdown code blocks (using \`\`\`json). Each chart should include type, data, and options properties. Use the actual data provided to create meaningful visualizations.
+
+IMPORTANT: Use Chart.js v4 syntax for scales:
+- Use "scales": {"y": {"beginAtZero": true}} instead of "yAxes"
+- Use "scales": {"x": {}} instead of "xAxes"  
+- Use "plugins": {"title": {"display": true, "text": "Title"}} instead of "title" at root level`
+      userPrompt = `Based on this inspection data: ${JSON.stringify(data)}, ${prompt}. Please analyze the data and create appropriate chart configurations using Chart.js v4 syntax.`
     } else if (type === 'data_requirements') {
       systemPrompt = `You are a data analysis expert. Given a data schema and user request, determine exactly what data fields and aggregations are needed. Return ONLY a JSON object with the required data specifications.`
       userPrompt = `Data schema: ${JSON.stringify(schema || data)}

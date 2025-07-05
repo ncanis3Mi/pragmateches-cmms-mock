@@ -50,13 +50,51 @@ function extractChartConfigs(text: string): any[] {
   for (const match of matches) {
     try {
       const config = JSON.parse(match[1])
-      configs.push(config)
+      // Convert Chart.js v2 syntax to v4 syntax
+      const convertedConfig = convertChartJSConfig(config)
+      configs.push(convertedConfig)
     } catch (e) {
       console.error('Failed to parse JSON:', e)
     }
   }
   
   return configs
+}
+
+// Convert Chart.js v2 syntax to v4 syntax
+function convertChartJSConfig(config: any): any {
+  const converted = { ...config }
+  
+  if (converted.options?.scales) {
+    const scales = converted.options.scales
+    const newScales: any = {}
+    
+    // Convert yAxes to y
+    if (scales.yAxes && Array.isArray(scales.yAxes)) {
+      newScales.y = scales.yAxes[0]
+      delete scales.yAxes
+    }
+    
+    // Convert xAxes to x
+    if (scales.xAxes && Array.isArray(scales.xAxes)) {
+      newScales.x = scales.xAxes[0]
+      delete scales.xAxes
+    }
+    
+    // Merge with existing scales
+    converted.options.scales = { ...scales, ...newScales }
+  }
+  
+  // Convert title from root level to plugins
+  if (converted.options?.title) {
+    if (!converted.options.plugins) {
+      converted.options.plugins = {}
+    }
+    converted.options.plugins.title = converted.options.title
+    delete converted.options.title
+  }
+  
+  return converted
 }
 
 export default function GraphGenerationPage() {

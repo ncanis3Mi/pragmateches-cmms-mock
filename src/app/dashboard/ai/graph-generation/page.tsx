@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { BarChart3, Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { getDataSchema, askForDataRequirements, aggregateRequestedData } from "@/lib/data-aggregation"
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -34,7 +35,7 @@ ChartJS.register(
 )
 
 const dataCategories = [
-  { value: "precision", label: "精機器", typeId: 1 },
+  { value: "precision", label: "静機器", typeId: 1 },
   { value: "rotating", label: "回転機", typeId: 2 },
   { value: "electrical", label: "電気", typeId: 3 },
   { value: "instrumentation", label: "計装", typeId: 4 },
@@ -79,21 +80,16 @@ export default function GraphGenerationPage() {
     const selectedCategory_info = dataCategories.find(c => c.value === selectedCategory)
     
     try {
-      // Fetch real data from Supabase
-      const { data: equipmentData, error } = await supabase
-        .from('equipment')
-        .select(`
-          *,
-          equipment_type_master("設備種別名"),
-          maintenance_history(*),
-          anomaly_report(*),
-          inspection_plan(*)
-        `)
-        .eq('設備種別ID', selectedCategory_info?.typeId)
+      // Step 1: Get data schema for the selected category
+      const dataSchema = await getDataSchema(selectedCategory_info!.typeId)
       
-      if (error) throw error
-      const filteredData = equipmentData || []
-
+      // Step 2: Ask AI what data it needs for this specific graph request
+      const dataRequirements = await askForDataRequirements(dataSchema, graphRequest)
+      
+      // Step 3: Aggregate only the requested data
+      const aggregatedData = await aggregateRequestedData(selectedCategory_info!.typeId, dataRequirements)
+      
+      // Step 4: Generate the graph with the targeted data
       const response = await fetch("/api/chatgpt", {
         method: "POST",
         headers: {
@@ -102,7 +98,7 @@ export default function GraphGenerationPage() {
         body: JSON.stringify({
           type: "graph",
           prompt: graphRequest,
-          data: filteredData,
+          data: aggregatedData,
         }),
       })
 
@@ -120,6 +116,7 @@ export default function GraphGenerationPage() {
         }
       }
     } catch (err) {
+      console.error('Graph generation error:', err)
       setError("エラーが発生しました。もう一度お試しください。")
     } finally {
       setLoading(false)

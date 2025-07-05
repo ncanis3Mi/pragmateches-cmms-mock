@@ -104,6 +104,7 @@ export default function GraphGenerationPage() {
   const [graphConfig, setGraphConfig] = useState<any>(null)
   const [chartData, setChartData] = useState<any[]>([])
   const [error, setError] = useState("")
+  const [conversationLog, setConversationLog] = useState<any[]>([])
 
   const handleGenerateGraph = async () => {
     if (!selectedCategory || !graphRequest) {
@@ -114,18 +115,47 @@ export default function GraphGenerationPage() {
     setLoading(true)
     setError("")
     setGraphConfig(null)
+    setConversationLog([])
 
     const selectedCategory_info = dataCategories.find(c => c.value === selectedCategory)
     
     try {
+      const log: any[] = []
+      
       // Step 1: Get data schema for the selected category
       const dataSchema = await getDataSchema(selectedCategory_info!.typeId)
+      log.push({
+        step: 1,
+        action: "データスキーマ取得",
+        timestamp: new Date().toLocaleTimeString(),
+        details: {
+          category: selectedCategory_info!.label,
+          equipment_count: dataSchema.equipment_count,
+          date_range: dataSchema.date_range
+        }
+      })
       
       // Step 2: Ask AI what data it needs for this specific graph request
       const dataRequirements = await askForDataRequirements(dataSchema, graphRequest)
+      log.push({
+        step: 2,
+        action: "AI データ要求分析",
+        timestamp: new Date().toLocaleTimeString(),
+        request: graphRequest,
+        response: dataRequirements
+      })
       
       // Step 3: Aggregate only the requested data
       const aggregatedData = await aggregateRequestedData(selectedCategory_info!.typeId, dataRequirements)
+      log.push({
+        step: 3,
+        action: "データ集約",
+        timestamp: new Date().toLocaleTimeString(),
+        details: {
+          aggregated_data_keys: Object.keys(aggregatedData),
+          data_size: JSON.stringify(aggregatedData).length + " bytes"
+        }
+      })
       
       // Step 4: Generate the graph with the targeted data
       const response = await fetch("/api/chatgpt", {
@@ -141,6 +171,22 @@ export default function GraphGenerationPage() {
       })
 
       const result = await response.json()
+      log.push({
+        step: 4,
+        action: "AI グラフ生成",
+        timestamp: new Date().toLocaleTimeString(),
+        request: {
+          type: "graph",
+          prompt: graphRequest,
+          data_summary: "集約されたデータ"
+        },
+        response: {
+          result: result.result ? result.result.substring(0, 200) + "..." : "エラー",
+          usage: result.usage
+        }
+      })
+
+      setConversationLog(log)
 
       if (result.error) {
         setError(result.error)
@@ -258,6 +304,59 @@ export default function GraphGenerationPage() {
             <pre className="bg-gray-100 p-4 rounded overflow-x-auto">
               {JSON.stringify(graphConfig, null, 2)}
             </pre>
+          </CardContent>
+        </Card>
+      )}
+
+      {conversationLog.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>OpenAI API 会話ログ</CardTitle>
+            <CardDescription>
+              マルチターン処理の詳細とOpenAI APIとの通信内容
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {conversationLog.map((log, index) => (
+                <div key={index} className="border-l-4 border-blue-500 pl-4 py-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
+                      ステップ {log.step}
+                    </span>
+                    <span className="text-sm text-gray-600">{log.timestamp}</span>
+                  </div>
+                  <h4 className="font-medium text-gray-900 mb-2">{log.action}</h4>
+                  
+                  {log.details && (
+                    <div className="bg-gray-50 p-3 rounded mb-2">
+                      <h5 className="text-sm font-medium mb-1">詳細:</h5>
+                      <pre className="text-xs text-gray-700 overflow-x-auto">
+                        {JSON.stringify(log.details, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                  
+                  {log.request && (
+                    <div className="bg-green-50 p-3 rounded mb-2">
+                      <h5 className="text-sm font-medium mb-1">リクエスト:</h5>
+                      <pre className="text-xs text-gray-700 overflow-x-auto">
+                        {typeof log.request === 'string' ? log.request : JSON.stringify(log.request, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                  
+                  {log.response && (
+                    <div className="bg-blue-50 p-3 rounded">
+                      <h5 className="text-sm font-medium mb-1">レスポンス:</h5>
+                      <pre className="text-xs text-gray-700 overflow-x-auto">
+                        {typeof log.response === 'string' ? log.response : JSON.stringify(log.response, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

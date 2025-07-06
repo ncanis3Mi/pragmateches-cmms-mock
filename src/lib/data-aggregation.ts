@@ -162,6 +162,27 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
     aggregatedData.anomaly_severity = aggregateAnomalySeverity(anomalyData || [])
   }
 
+  // Thickness time series
+  if (requirements.aggregations.includes('thickness_time_series')) {
+    const { data: thicknessData } = await supabase
+      .from('thickness_measurement')
+      .select('設備ID, 検査日, "肉厚測定値(mm)", "最小許容肉厚(mm)", "測定値(mm)"')
+      .in('設備ID', equipmentData.map(eq => eq.設備ID))
+      .order('検査日', { ascending: true })
+    
+    aggregatedData.thickness_time_series = aggregateThicknessTimeSeries(thicknessData || [])
+  }
+
+  // Risk matrix
+  if (requirements.aggregations.includes('risk_matrix')) {
+    const { data: riskData } = await supabase
+      .from('equipment_risk_assessment')
+      .select('設備ID, "影響度ランク (5段階)", "信頼性ランク (5段階)", "リスクスコア (再計算)"')
+      .in('設備ID', equipmentData.map(eq => eq.設備ID))
+    
+    aggregatedData.risk_matrix = aggregateRiskMatrix(riskData || [])
+  }
+
   // Time series data
   if (requirements.time_grouping) {
     aggregatedData.time_series = await aggregateTimeSeriesData(
@@ -223,4 +244,47 @@ async function aggregateTimeSeriesData(equipmentData: any[], timeGrouping: strin
   // Implementation depends on time grouping type (daily, weekly, monthly, etc.)
   // This is a placeholder - implement based on specific requirements
   return []
+}
+
+function aggregateThicknessTimeSeries(thicknessData: any[]): any[] {
+  // Group thickness measurements by date and equipment
+  const timeSeriesData = thicknessData.map(measurement => ({
+    date: measurement.検査日,
+    equipment_id: measurement.設備ID,
+    thickness_value: measurement["肉厚測定値(mm)"] || measurement["測定値(mm)"],
+    min_thickness: measurement["最小許容肉厚(mm)"],
+    is_below_threshold: (measurement["肉厚測定値(mm)"] || measurement["測定値(mm)"]) < measurement["最小許容肉厚(mm)"]
+  }))
+
+  return timeSeriesData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+}
+
+function aggregateRiskMatrix(riskData: any[]): any[] {
+  // Create matrix data for heatmap visualization
+  const matrix: { [key: string]: number } = {}
+  
+  riskData.forEach(risk => {
+    const impact = risk["影響度ランク (5段階)"] || 1
+    const reliability = risk["信頼性ランク (5段階)"] || 1
+    const key = `${impact}-${reliability}`
+    matrix[key] = (matrix[key] || 0) + 1
+  })
+
+  // Convert to matrix format for Plotly heatmap
+  const matrixData = []
+  for (let impact = 1; impact <= 5; impact++) {
+    const row = []
+    for (let reliability = 1; reliability <= 5; reliability++) {
+      const key = `${impact}-${reliability}`
+      row.push(matrix[key] || 0)
+    }
+    matrixData.push(row)
+  }
+
+  return {
+    z: matrixData,
+    x: ['信頼性1', '信頼性2', '信頼性3', '信頼性4', '信頼性5'],
+    y: ['影響度1', '影響度2', '影響度3', '影響度4', '影響度5'],
+    type: 'heatmap'
+  }
 }

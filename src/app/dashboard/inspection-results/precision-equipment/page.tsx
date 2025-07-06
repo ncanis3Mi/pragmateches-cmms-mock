@@ -15,15 +15,11 @@ export default function PrecisionEquipmentPage() {
         .from('inspection_plan')
         .select(`
           *,
-          equipment!inner(
-            設備名,
-            設備タグ,
-            設備種別ID
-          ),
+          equipment!inner(設備名, 設備タグ, 設備種別ID),
           inspection_cycle_master(周期名),
           staff_master(氏名)
         `)
-        .eq('equipment.設備種別ID', 1) // 1 = 精機器
+        .eq('equipment.設備種別ID', 1) // 1 = 静機器
         .order('次回点検日', { ascending: true })
 
       if (error) {
@@ -58,7 +54,7 @@ export default function PrecisionEquipmentPage() {
 
   return (
     <DashboardLayout>
-      <InspectionResultsTable data={data} title="精機器" />
+      <InspectionResultsTable data={data} title="静機器" />
     </DashboardLayout>
   )
 }

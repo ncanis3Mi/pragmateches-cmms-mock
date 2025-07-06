@@ -1,0 +1,1103 @@
+From 84c5b64c258f7c78b82d145786afd5524eb3f788 Mon Sep 17 00:00:00 2001
+From: hrgmnk <bananas.go.bananas@gmail.com>
+Date: Fri, 4 Jul 2025 12:19:57 +0900
+Subject: [PATCH] feat: Add AI-powered graph generation and insights analysis
+ features
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Added ChatGPT integration via OpenAI API
+- Created new "AIアシスタント" menu section with two features:
+  - Graph Generation: Generates chart configurations from inspection data
+  - Insights Analysis: Provides AI-driven analysis of equipment conditions
+- Implemented Chart.js integration for visual chart rendering
+- Added Radix UI components (Select, Textarea) for better UX
+- Created API endpoint at /api/chatgpt for AI processing
+- Added environment variable support for OpenAI API key
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+---
+ package-lock.json                             | 154 +++++++++----
+ package.json                                  |  15 +-
+ src/app/api/chatgpt/route.ts                  |  51 +++++
+ .../dashboard/ai/graph-generation/page.tsx    | 216 ++++++++++++++++++
+ .../dashboard/ai/insights-analysis/page.tsx   | 170 ++++++++++++++
+ src/components/layout/sidebar.tsx             |  16 +-
+ src/components/ui/select.tsx                  | 158 +++++++++++++
+ src/components/ui/textarea.tsx                |  23 ++
+ 8 files changed, 751 insertions(+), 52 deletions(-)
+ create mode 100644 src/app/api/chatgpt/route.ts
+ create mode 100644 src/app/dashboard/ai/graph-generation/page.tsx
+ create mode 100644 src/app/dashboard/ai/insights-analysis/page.tsx
+ create mode 100644 src/components/ui/select.tsx
+ create mode 100644 src/components/ui/textarea.tsx
+
+diff --git a/package-lock.json b/package-lock.json
+index 4246288..b12c29d 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -19,7 +19,7 @@
+         "@radix-ui/react-popover": "^1.0.7",
+         "@radix-ui/react-progress": "^1.0.3",
+         "@radix-ui/react-radio-group": "^1.1.3",
+-        "@radix-ui/react-select": "^2.0.0",
++        "@radix-ui/react-select": "^2.2.5",
+         "@radix-ui/react-separator": "^1.0.3",
+         "@radix-ui/react-slot": "^1.0.2",
+         "@radix-ui/react-switch": "^1.0.3",
+@@ -27,13 +27,16 @@
+         "@radix-ui/react-toast": "^1.1.5",
+         "@radix-ui/react-tooltip": "^1.0.7",
+         "@tailwindcss/typography": "^0.5.13",
++        "chart.js": "^4.5.0",
+         "class-variance-authority": "^0.7.0",
+         "clsx": "^2.1.1",
+         "lucide-react": "^0.400.0",
+-        "next": "14.2.5",
++        "next": "^14.2.30",
+         "next-safe-action": "^7.4.2",
+         "next-themes": "^0.3.0",
++        "openai": "^5.8.2",
+         "react": "^18",
++        "react-chartjs-2": "^5.3.0",
+         "react-dom": "^18",
+         "react-hook-form": "^7.52.1",
+         "tailwind-merge": "^2.4.0",
+@@ -396,6 +399,12 @@
+         "@jridgewell/sourcemap-codec": "^1.4.14"
+       }
+     },
++    "node_modules/@kurkle/color": {
++      "version": "0.3.4",
++      "resolved": "https://registry.npmjs.org/@kurkle/color/-/color-0.3.4.tgz",
++      "integrity": "sha512-M5UknZPHRu3DEDWoipU6sE8PdkZ6Z/S+v4dD+Ke8IaNlpdSQah50lz1KtcFBa2vsdOnwbbnxJwVM4wty6udA5w==",
++      "license": "MIT"
++    },
+     "node_modules/@lit-labs/ssr-dom-shim": {
+       "version": "1.3.0",
+       "resolved": "https://registry.npmjs.org/@lit-labs/ssr-dom-shim/-/ssr-dom-shim-1.3.0.tgz",
+@@ -706,9 +715,10 @@
+       }
+     },
+     "node_modules/@next/env": {
+-      "version": "14.2.5",
+-      "resolved": "https://registry.npmjs.org/@next/env/-/env-14.2.5.tgz",
+-      "integrity": "sha512-/zZGkrTOsraVfYjGP8uM0p6r0BDT6xWpkjdVbcz66PJVSpwXX3yNiRycxAuDfBKGWBrZBXRuK/YVlkNgxHGwmA=="
++      "version": "14.2.30",
++      "resolved": "https://registry.npmjs.org/@next/env/-/env-14.2.30.tgz",
++      "integrity": "sha512-KBiBKrDY6kxTQWGzKjQB7QirL3PiiOkV7KW98leHFjtVRKtft76Ra5qSA/SL75xT44dp6hOcqiiJ6iievLOYug==",
++      "license": "MIT"
+     },
+     "node_modules/@next/eslint-plugin-next": {
+       "version": "14.2.5",
+@@ -720,12 +730,13 @@
+       }
+     },
+     "node_modules/@next/swc-darwin-arm64": {
+-      "version": "14.2.5",
+-      "resolved": "https://registry.npmjs.org/@next/swc-darwin-arm64/-/swc-darwin-arm64-14.2.5.tgz",
+-      "integrity": "sha512-/9zVxJ+K9lrzSGli1///ujyRfon/ZneeZ+v4ptpiPoOU+GKZnm8Wj8ELWU1Pm7GHltYRBklmXMTUqM/DqQ99FQ==",
++      "version": "14.2.30",
++      "resolved": "https://registry.npmjs.org/@next/swc-darwin-arm64/-/swc-darwin-arm64-14.2.30.tgz",
++      "integrity": "sha512-EAqfOTb3bTGh9+ewpO/jC59uACadRHM6TSA9DdxJB/6gxOpyV+zrbqeXiFTDy9uV6bmipFDkfpAskeaDcO+7/g==",
+       "cpu": [
+         "arm64"
+       ],
++      "license": "MIT",
+       "optional": true,
+       "os": [
+         "darwin"
+@@ -735,12 +746,13 @@
+       }
+     },
+     "node_modules/@next/swc-darwin-x64": {
+-      "version": "14.2.5",
+-      "resolved": "https://registry.npmjs.org/@next/swc-darwin-x64/-/swc-darwin-x64-14.2.5.tgz",
+-      "integrity": "sha512-vXHOPCwfDe9qLDuq7U1OYM2wUY+KQ4Ex6ozwsKxp26BlJ6XXbHleOUldenM67JRyBfVjv371oneEvYd3H2gNSA==",
++      "version": "14.2.30",
++      "resolved": "https://registry.npmjs.org/@next/swc-darwin-x64/-/swc-darwin-x64-14.2.30.tgz",
++      "integrity": "sha512-TyO7Wz1IKE2kGv8dwQ0bmPL3s44EKVencOqwIY69myoS3rdpO1NPg5xPM5ymKu7nfX4oYJrpMxv8G9iqLsnL4A==",
+       "cpu": [
+         "x64"
+       ],
++      "license": "MIT",
+       "optional": true,
+       "os": [
+         "darwin"
+@@ -750,12 +762,13 @@
+       }
+     },
+     "node_modules/@next/swc-linux-arm64-gnu": {
+-      "version": "14.2.5",
+-      "resolved": "https://registry.npmjs.org/@next/swc-linux-arm64-gnu/-/swc-linux-arm64-gnu-14.2.5.tgz",
+-      "integrity": "sha512-vlhB8wI+lj8q1ExFW8lbWutA4M2ZazQNvMWuEDqZcuJJc78iUnLdPPunBPX8rC4IgT6lIx/adB+Cwrl99MzNaA==",
++      "version": "14.2.30",
++      "resolved": "https://registry.npmjs.org/@next/swc-linux-arm64-gnu/-/swc-linux-arm64-gnu-14.2.30.tgz",
++      "integrity": "sha512-I5lg1fgPJ7I5dk6mr3qCH1hJYKJu1FsfKSiTKoYwcuUf53HWTrEkwmMI0t5ojFKeA6Vu+SfT2zVy5NS0QLXV4Q==",
+       "cpu": [
+         "arm64"
+       ],
++      "license": "MIT",
+       "optional": true,
+       "os": [
+         "linux"
+@@ -765,12 +778,13 @@
+       }
+     },
+     "node_modules/@next/swc-linux-arm64-musl": {
+-      "version": "14.2.5",
+-      "resolved": "https://registry.npmjs.org/@next/swc-linux-arm64-musl/-/swc-linux-arm64-musl-14.2.5.tgz",
+-      "integrity": "sha512-NpDB9NUR2t0hXzJJwQSGu1IAOYybsfeB+LxpGsXrRIb7QOrYmidJz3shzY8cM6+rO4Aojuef0N/PEaX18pi9OA==",
++      "version": "14.2.30",
++      "resolved": "https://registry.npmjs.org/@next/swc-linux-arm64-musl/-/swc-linux-arm64-musl-14.2.30.tgz",
++      "integrity": "sha512-8GkNA+sLclQyxgzCDs2/2GSwBc92QLMrmYAmoP2xehe5MUKBLB2cgo34Yu242L1siSkwQkiV4YLdCnjwc/Micw==",
+       "cpu": [
+         "arm64"
+       ],
++      "license": "MIT",
+       "optional": true,
+       "os": [
+         "linux"
+@@ -780,12 +794,13 @@
+       }
+     },
+     "node_modules/@next/swc-linux-x64-gnu": {
+-      "version": "14.2.5",
+-      "resolved": "https://registry.npmjs.org/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-14.2.5.tgz",
+-      "integrity": "sha512-8XFikMSxWleYNryWIjiCX+gU201YS+erTUidKdyOVYi5qUQo/gRxv/3N1oZFCgqpesN6FPeqGM72Zve+nReVXQ==",
++      "version": "14.2.30",
++      "resolved": "https://registry.npmjs.org/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-14.2.30.tgz",
++      "integrity": "sha512-8Ly7okjssLuBoe8qaRCcjGtcMsv79hwzn/63wNeIkzJVFVX06h5S737XNr7DZwlsbTBDOyI6qbL2BJB5n6TV/w==",
+       "cpu": [
+         "x64"
+       ],
++      "license": "MIT",
+       "optional": true,
+       "os": [
+         "linux"
+@@ -795,12 +810,13 @@
+       }
+     },
+     "node_modules/@next/swc-linux-x64-musl": {
+-      "version": "14.2.5",
+-      "resolved": "https://registry.npmjs.org/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-14.2.5.tgz",
+-      "integrity": "sha512-6QLwi7RaYiQDcRDSU/os40r5o06b5ue7Jsk5JgdRBGGp8l37RZEh9JsLSM8QF0YDsgcosSeHjglgqi25+m04IQ==",
++      "version": "14.2.30",
++      "resolved": "https://registry.npmjs.org/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-14.2.30.tgz",
++      "integrity": "sha512-dBmV1lLNeX4mR7uI7KNVHsGQU+OgTG5RGFPi3tBJpsKPvOPtg9poyav/BYWrB3GPQL4dW5YGGgalwZ79WukbKQ==",
+       "cpu": [
+         "x64"
+       ],
++      "license": "MIT",
+       "optional": true,
+       "os": [
+         "linux"
+@@ -810,12 +826,13 @@
+       }
+     },
+     "node_modules/@next/swc-win32-arm64-msvc": {
+-      "version": "14.2.5",
+-      "resolved": "https://registry.npmjs.org/@next/swc-win32-arm64-msvc/-/swc-win32-arm64-msvc-14.2.5.tgz",
+-      "integrity": "sha512-1GpG2VhbspO+aYoMOQPQiqc/tG3LzmsdBH0LhnDS3JrtDx2QmzXe0B6mSZZiN3Bq7IOMXxv1nlsjzoS1+9mzZw==",
++      "version": "14.2.30",
++      "resolved": "https://registry.npmjs.org/@next/swc-win32-arm64-msvc/-/swc-win32-arm64-msvc-14.2.30.tgz",
++      "integrity": "sha512-6MMHi2Qc1Gkq+4YLXAgbYslE1f9zMGBikKMdmQRHXjkGPot1JY3n5/Qrbg40Uvbi8//wYnydPnyvNhI1DMUW1g==",
+       "cpu": [
+         "arm64"
+       ],
++      "license": "MIT",
+       "optional": true,
+       "os": [
+         "win32"
+@@ -825,12 +842,13 @@
+       }
+     },
+     "node_modules/@next/swc-win32-ia32-msvc": {
+-      "version": "14.2.5",
+-      "resolved": "https://registry.npmjs.org/@next/swc-win32-ia32-msvc/-/swc-win32-ia32-msvc-14.2.5.tgz",
+-      "integrity": "sha512-Igh9ZlxwvCDsu6438FXlQTHlRno4gFpJzqPjSIBZooD22tKeI4fE/YMRoHVJHmrQ2P5YL1DoZ0qaOKkbeFWeMg==",
++      "version": "14.2.30",
++      "resolved": "https://registry.npmjs.org/@next/swc-win32-ia32-msvc/-/swc-win32-ia32-msvc-14.2.30.tgz",
++      "integrity": "sha512-pVZMnFok5qEX4RT59mK2hEVtJX+XFfak+/rjHpyFh7juiT52r177bfFKhnlafm0UOSldhXjj32b+LZIOdswGTg==",
+       "cpu": [
+         "ia32"
+       ],
++      "license": "MIT",
+       "optional": true,
+       "os": [
+         "win32"
+@@ -840,12 +858,13 @@
+       }
+     },
+     "node_modules/@next/swc-win32-x64-msvc": {
+-      "version": "14.2.5",
+-      "resolved": "https://registry.npmjs.org/@next/swc-win32-x64-msvc/-/swc-win32-x64-msvc-14.2.5.tgz",
+-      "integrity": "sha512-tEQ7oinq1/CjSG9uSTerca3v4AZ+dFa+4Yu6ihaG8Ud8ddqLQgFGcnwYls13H5X5CPDPZJdYxyeMui6muOLd4g==",
++      "version": "14.2.30",
++      "resolved": "https://registry.npmjs.org/@next/swc-win32-x64-msvc/-/swc-win32-x64-msvc-14.2.30.tgz",
++      "integrity": "sha512-4KCo8hMZXMjpTzs3HOqOGYYwAXymXIy7PEPAXNEcEOyKqkjiDlECumrWziy+JEF0Oi4ILHGxzgQ3YiMGG2t/Lg==",
+       "cpu": [
+         "x64"
+       ],
++      "license": "MIT",
+       "optional": true,
+       "os": [
+         "win32"
+@@ -1617,6 +1636,7 @@
+       "version": "2.2.5",
+       "resolved": "https://registry.npmjs.org/@radix-ui/react-select/-/react-select-2.2.5.tgz",
+       "integrity": "sha512-HnMTdXEVuuyzx63ME0ut4+sEMYW6oouHWNGUZc7ddvUWIcfCva/AMoqEW/3wnEllriMWBa0RHspCYnfCWJQYmA==",
++      "license": "MIT",
+       "dependencies": {
+         "@radix-ui/number": "1.1.1",
+         "@radix-ui/primitive": "1.1.2",
+@@ -5763,6 +5783,18 @@
+         "url": "https://github.com/chalk/chalk?sponsor=1"
+       }
+     },
++    "node_modules/chart.js": {
++      "version": "4.5.0",
++      "resolved": "https://registry.npmjs.org/chart.js/-/chart.js-4.5.0.tgz",
++      "integrity": "sha512-aYeC/jDgSEx8SHWZvANYMioYMZ2KX02W6f6uVfyteuCGcadDLcYVHdfdygsTQkQ4TKn5lghoojAsPj5pu0SnvQ==",
++      "license": "MIT",
++      "dependencies": {
++        "@kurkle/color": "^0.3.0"
++      },
++      "engines": {
++        "pnpm": ">=8"
++      }
++    },
+     "node_modules/chokidar": {
+       "version": "3.6.0",
+       "resolved": "https://registry.npmjs.org/chokidar/-/chokidar-3.6.0.tgz",
+@@ -8594,11 +8626,12 @@
+       "dev": true
+     },
+     "node_modules/next": {
+-      "version": "14.2.5",
+-      "resolved": "https://registry.npmjs.org/next/-/next-14.2.5.tgz",
+-      "integrity": "sha512-0f8aRfBVL+mpzfBjYfQuLWh2WyAwtJXCRfkPF4UJ5qd2YwrHczsrSzXU4tRMV0OAxR8ZJZWPFn6uhSC56UTsLA==",
++      "version": "14.2.30",
++      "resolved": "https://registry.npmjs.org/next/-/next-14.2.30.tgz",
++      "integrity": "sha512-+COdu6HQrHHFQ1S/8BBsCag61jZacmvbuL2avHvQFbWa2Ox7bE+d8FyNgxRLjXQ5wtPyQwEmk85js/AuaG2Sbg==",
++      "license": "MIT",
+       "dependencies": {
+-        "@next/env": "14.2.5",
++        "@next/env": "14.2.30",
+         "@swc/helpers": "0.5.5",
+         "busboy": "1.6.0",
+         "caniuse-lite": "^1.0.30001579",
+@@ -8613,15 +8646,15 @@
+         "node": ">=18.17.0"
+       },
+       "optionalDependencies": {
+-        "@next/swc-darwin-arm64": "14.2.5",
+-        "@next/swc-darwin-x64": "14.2.5",
+-        "@next/swc-linux-arm64-gnu": "14.2.5",
+-        "@next/swc-linux-arm64-musl": "14.2.5",
+-        "@next/swc-linux-x64-gnu": "14.2.5",
+-        "@next/swc-linux-x64-musl": "14.2.5",
+-        "@next/swc-win32-arm64-msvc": "14.2.5",
+-        "@next/swc-win32-ia32-msvc": "14.2.5",
+-        "@next/swc-win32-x64-msvc": "14.2.5"
++        "@next/swc-darwin-arm64": "14.2.30",
++        "@next/swc-darwin-x64": "14.2.30",
++        "@next/swc-linux-arm64-gnu": "14.2.30",
++        "@next/swc-linux-arm64-musl": "14.2.30",
++        "@next/swc-linux-x64-gnu": "14.2.30",
++        "@next/swc-linux-x64-musl": "14.2.30",
++        "@next/swc-win32-arm64-msvc": "14.2.30",
++        "@next/swc-win32-ia32-msvc": "14.2.30",
++        "@next/swc-win32-x64-msvc": "14.2.30"
+       },
+       "peerDependencies": {
+         "@opentelemetry/api": "^1.1.0",
+@@ -8973,6 +9006,27 @@
+         "wrappy": "1"
+       }
+     },
++    "node_modules/openai": {
++      "version": "5.8.2",
++      "resolved": "https://registry.npmjs.org/openai/-/openai-5.8.2.tgz",
++      "integrity": "sha512-8C+nzoHYgyYOXhHGN6r0fcb4SznuEn1R7YZMvlqDbnCuE0FM2mm3T1HiYW6WIcMS/F1Of2up/cSPjLPaWt0X9Q==",
++      "license": "Apache-2.0",
++      "bin": {
++        "openai": "bin/cli"
++      },
++      "peerDependencies": {
++        "ws": "^8.18.0",
++        "zod": "^3.23.8"
++      },
++      "peerDependenciesMeta": {
++        "ws": {
++          "optional": true
++        },
++        "zod": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/optionator": {
+       "version": "0.9.4",
+       "resolved": "https://registry.npmjs.org/optionator/-/optionator-0.9.4.tgz",
+@@ -9481,6 +9535,16 @@
+         "node": ">=0.10.0"
+       }
+     },
++    "node_modules/react-chartjs-2": {
++      "version": "5.3.0",
++      "resolved": "https://registry.npmjs.org/react-chartjs-2/-/react-chartjs-2-5.3.0.tgz",
++      "integrity": "sha512-UfZZFnDsERI3c3CZGxzvNJd02SHjaSJ8kgW1djn65H1KK8rehwTjyrRKOG3VTMG8wtHZ5rgAO5oTHtHi9GCCmw==",
++      "license": "MIT",
++      "peerDependencies": {
++        "chart.js": "^4.1.1",
++        "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
++      }
++    },
+     "node_modules/react-dom": {
+       "version": "18.3.1",
+       "resolved": "https://registry.npmjs.org/react-dom/-/react-dom-18.3.1.tgz",
+diff --git a/package.json b/package.json
+index 85d401a..271b045 100644
+--- a/package.json
++++ b/package.json
+@@ -10,9 +10,7 @@
+     "type-check": "tsc --noEmit"
+   },
+   "dependencies": {
+-    "next": "14.2.5",
+-    "react": "^18",
+-    "react-dom": "^18",
++    "@hookform/resolvers": "^3.3.4",
+     "@radix-ui/react-accordion": "^1.1.2",
+     "@radix-ui/react-alert-dialog": "^1.0.5",
+     "@radix-ui/react-avatar": "^1.0.4",
+@@ -23,7 +21,7 @@
+     "@radix-ui/react-popover": "^1.0.7",
+     "@radix-ui/react-progress": "^1.0.3",
+     "@radix-ui/react-radio-group": "^1.1.3",
+-    "@radix-ui/react-select": "^2.0.0",
++    "@radix-ui/react-select": "^2.2.5",
+     "@radix-ui/react-separator": "^1.0.3",
+     "@radix-ui/react-slot": "^1.0.2",
+     "@radix-ui/react-switch": "^1.0.3",
+@@ -31,13 +29,18 @@
+     "@radix-ui/react-toast": "^1.1.5",
+     "@radix-ui/react-tooltip": "^1.0.7",
+     "@tailwindcss/typography": "^0.5.13",
++    "chart.js": "^4.5.0",
+     "class-variance-authority": "^0.7.0",
+     "clsx": "^2.1.1",
+     "lucide-react": "^0.400.0",
++    "next": "^14.2.30",
+     "next-safe-action": "^7.4.2",
+     "next-themes": "^0.3.0",
++    "openai": "^5.8.2",
++    "react": "^18",
++    "react-chartjs-2": "^5.3.0",
++    "react-dom": "^18",
+     "react-hook-form": "^7.52.1",
+-    "@hookform/resolvers": "^3.3.4",
+     "tailwind-merge": "^2.4.0",
+     "tailwindcss-animate": "^1.0.7",
+     "viem": "^2.17.5",
+@@ -55,4 +58,4 @@
+     "tailwindcss": "^3.4.1",
+     "typescript": "^5"
+   }
+-} 
+\ No newline at end of file
++}
+diff --git a/src/app/api/chatgpt/route.ts b/src/app/api/chatgpt/route.ts
+new file mode 100644
+index 0000000..1ec7223
+--- /dev/null
++++ b/src/app/api/chatgpt/route.ts
+@@ -0,0 +1,51 @@
++import { NextRequest, NextResponse } from 'next/server'
++import OpenAI from 'openai'
++
++const openai = new OpenAI({
++  apiKey: process.env.OPENAI_API_KEY,
++})
++
++export async function POST(request: NextRequest) {
++  try {
++    const { prompt, type, data } = await request.json()
++
++    if (!prompt || !type) {
++      return NextResponse.json(
++        { error: 'Missing required fields' },
++        { status: 400 }
++      )
++    }
++
++    let systemPrompt = ''
++    let userPrompt = prompt
++
++    if (type === 'graph') {
++      systemPrompt = `You are a data visualization expert. Generate chart configurations for inspection data in Chart.js format. Return ONLY valid JSON configurations wrapped in markdown code blocks (using \`\`\`json). Each chart should include type, data, and options properties. Use the actual data provided to create meaningful visualizations.`
++      userPrompt = `Based on this inspection data: ${JSON.stringify(data)}, ${prompt}. Please analyze the data and create appropriate chart configurations.`
++    } else if (type === 'insights') {
++      systemPrompt = `You are an industrial equipment inspection expert. Analyze inspection results and provide insights about equipment condition, trends, and recommendations. Focus on identifying anomalies, trends, and maintenance recommendations.`
++      userPrompt = `Analyze this inspection data: ${JSON.stringify(data)}, ${prompt}`
++    }
++
++    const completion = await openai.chat.completions.create({
++      messages: [
++        { role: 'system', content: systemPrompt },
++        { role: 'user', content: userPrompt }
++      ],
++      model: 'gpt-4',
++      temperature: 0.7,
++      max_tokens: 1000,
++    })
++
++    return NextResponse.json({
++      result: completion.choices[0].message.content,
++      usage: completion.usage,
++    })
++  } catch (error) {
++    console.error('ChatGPT API error:', error)
++    return NextResponse.json(
++      { error: 'Failed to process request' },
++      { status: 500 }
++    )
++  }
++}
+\ No newline at end of file
+diff --git a/src/app/dashboard/ai/graph-generation/page.tsx b/src/app/dashboard/ai/graph-generation/page.tsx
+new file mode 100644
+index 0000000..34668c6
+--- /dev/null
++++ b/src/app/dashboard/ai/graph-generation/page.tsx
+@@ -0,0 +1,216 @@
++"use client"
++
++import { useState, useEffect } from "react"
++import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
++import { Button } from "@/components/ui/button"
++import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
++import { Textarea } from "@/components/ui/textarea"
++import { BarChart3, Loader2 } from "lucide-react"
++import { precisionEquipmentData, rotatingEquipmentData, electricalData, instrumentationData } from "@/types/inspection"
++import {
++  Chart as ChartJS,
++  CategoryScale,
++  LinearScale,
++  BarElement,
++  Title,
++  Tooltip,
++  Legend,
++  ArcElement,
++  PointElement,
++  LineElement,
++} from 'chart.js'
++import { Bar, Pie, Line } from 'react-chartjs-2'
++
++ChartJS.register(
++  CategoryScale,
++  LinearScale,
++  BarElement,
++  Title,
++  Tooltip,
++  Legend,
++  ArcElement,
++  PointElement,
++  LineElement
++)
++
++const dataCategories = [
++  { value: "precision", label: "精機器", data: precisionEquipmentData },
++  { value: "rotating", label: "回転機", data: rotatingEquipmentData },
++  { value: "electrical", label: "電気", data: electricalData },
++  { value: "instrumentation", label: "計装", data: instrumentationData },
++]
++
++// Helper function to extract chart configurations from AI response
++function extractChartConfigs(text: string): any[] {
++  const jsonPattern = /```json\n([\s\S]*?)```/g
++  const matches = text.matchAll(jsonPattern)
++  const configs = []
++  
++  for (const match of matches) {
++    try {
++      const config = JSON.parse(match[1])
++      configs.push(config)
++    } catch (e) {
++      console.error('Failed to parse JSON:', e)
++    }
++  }
++  
++  return configs
++}
++
++export default function GraphGenerationPage() {
++  const [selectedCategory, setSelectedCategory] = useState("")
++  const [graphRequest, setGraphRequest] = useState("")
++  const [loading, setLoading] = useState(false)
++  const [graphConfig, setGraphConfig] = useState<any>(null)
++  const [chartData, setChartData] = useState<any[]>([])
++  const [error, setError] = useState("")
++
++  const handleGenerateGraph = async () => {
++    if (!selectedCategory || !graphRequest) {
++      setError("カテゴリーとグラフの要求を入力してください")
++      return
++    }
++
++    setLoading(true)
++    setError("")
++    setGraphConfig(null)
++
++    const selectedData = dataCategories.find(c => c.value === selectedCategory)?.data
++
++    try {
++      const response = await fetch("/api/chatgpt", {
++        method: "POST",
++        headers: {
++          "Content-Type": "application/json",
++        },
++        body: JSON.stringify({
++          type: "graph",
++          prompt: graphRequest,
++          data: selectedData,
++        }),
++      })
++
++      const result = await response.json()
++
++      if (result.error) {
++        setError(result.error)
++      } else {
++        // Parse the response to extract chart configurations
++        const chartConfigs = extractChartConfigs(result.result)
++        if (chartConfigs.length > 0) {
++          setChartData(chartConfigs)
++        } else {
++          setGraphConfig({ text: result.result })
++        }
++      }
++    } catch (err) {
++      setError("エラーが発生しました。もう一度お試しください。")
++    } finally {
++      setLoading(false)
++    }
++  }
++
++  return (
++    <div className="space-y-6">
++      <div>
++        <h1 className="text-3xl font-bold">AIグラフ生成</h1>
++        <p className="text-gray-600 mt-2">検査データからAIを使用してグラフを生成します</p>
++      </div>
++
++      <Card>
++        <CardHeader>
++          <CardTitle>グラフ生成設定</CardTitle>
++          <CardDescription>
++            生成したいグラフの種類やデータカテゴリーを選択してください
++          </CardDescription>
++        </CardHeader>
++        <CardContent className="space-y-4">
++          <div>
++            <label className="block text-sm font-medium mb-2">データカテゴリー</label>
++            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
++              <SelectTrigger>
++                <SelectValue placeholder="カテゴリーを選択" />
++              </SelectTrigger>
++              <SelectContent>
++                {dataCategories.map((category) => (
++                  <SelectItem key={category.value} value={category.value}>
++                    {category.label}
++                  </SelectItem>
++                ))}
++              </SelectContent>
++            </Select>
++          </div>
++
++          <div>
++            <label className="block text-sm font-medium mb-2">グラフの要求</label>
++            <Textarea
++              placeholder="例：月別の検査結果の推移を棒グラフで表示してください。合格・不合格・要確認の件数を比較できるようにしてください。"
++              value={graphRequest}
++              onChange={(e) => setGraphRequest(e.target.value)}
++              rows={4}
++            />
++          </div>
++
++          {error && (
++            <div className="text-sm text-red-600">{error}</div>
++          )}
++
++          <Button
++            onClick={handleGenerateGraph}
++            disabled={loading || !selectedCategory || !graphRequest}
++            className="w-full"
++          >
++            {loading ? (
++              <>
++                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
++                生成中...
++              </>
++            ) : (
++              <>
++                <BarChart3 className="mr-2 h-4 w-4" />
++                グラフを生成
++              </>
++            )}
++          </Button>
++        </CardContent>
++      </Card>
++
++      {chartData.length > 0 && (
++        <div className="space-y-6">
++          <h2 className="text-xl font-semibold">生成されたグラフ</h2>
++          {chartData.map((config, index) => (
++            <Card key={index}>
++              <CardHeader>
++                <CardTitle>グラフ {index + 1}</CardTitle>
++              </CardHeader>
++              <CardContent>
++                <div className="h-96">
++                  {config.type === 'bar' && <Bar data={config.data} options={config.options || {}} />}
++                  {config.type === 'pie' && <Pie data={config.data} options={config.options || {}} />}
++                  {config.type === 'line' && <Line data={config.data} options={config.options || {}} />}
++                </div>
++              </CardContent>
++            </Card>
++          ))}
++        </div>
++      )}
++
++      {graphConfig && (
++        <Card>
++          <CardHeader>
++            <CardTitle>生成されたグラフ設定</CardTitle>
++            <CardDescription>
++              以下の設定をChart.jsやRechartsなどのライブラリで使用できます
++            </CardDescription>
++          </CardHeader>
++          <CardContent>
++            <pre className="bg-gray-100 p-4 rounded overflow-x-auto">
++              {JSON.stringify(graphConfig, null, 2)}
++            </pre>
++          </CardContent>
++        </Card>
++      )}
++    </div>
++  )
++}
+\ No newline at end of file
+diff --git a/src/app/dashboard/ai/insights-analysis/page.tsx b/src/app/dashboard/ai/insights-analysis/page.tsx
+new file mode 100644
+index 0000000..2446357
+--- /dev/null
++++ b/src/app/dashboard/ai/insights-analysis/page.tsx
+@@ -0,0 +1,170 @@
++"use client"
++
++import { useState } from "react"
++import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
++import { Button } from "@/components/ui/button"
++import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
++import { Brain, Loader2, AlertCircle, TrendingUp, CheckCircle } from "lucide-react"
++import { precisionEquipmentData, rotatingEquipmentData, electricalData, instrumentationData } from "@/types/inspection"
++import { cn } from "@/lib/utils"
++
++const dataCategories = [
++  { value: "precision", label: "精機器", data: precisionEquipmentData },
++  { value: "rotating", label: "回転機", data: rotatingEquipmentData },
++  { value: "electrical", label: "電気", data: electricalData },
++  { value: "instrumentation", label: "計装", data: instrumentationData },
++]
++
++export default function InsightsAnalysisPage() {
++  const [selectedCategory, setSelectedCategory] = useState("")
++  const [loading, setLoading] = useState(false)
++  const [insights, setInsights] = useState("")
++  const [error, setError] = useState("")
++
++  const handleAnalyzeData = async () => {
++    if (!selectedCategory) {
++      setError("カテゴリーを選択してください")
++      return
++    }
++
++    setLoading(true)
++    setError("")
++    setInsights("")
++
++    const selectedData = dataCategories.find(c => c.value === selectedCategory)?.data
++    const categoryLabel = dataCategories.find(c => c.value === selectedCategory)?.label
++
++    try {
++      const response = await fetch("/api/chatgpt", {
++        method: "POST",
++        headers: {
++          "Content-Type": "application/json",
++        },
++        body: JSON.stringify({
++          type: "insights",
++          prompt: `${categoryLabel}の検査データを分析し、以下の観点から日本語でインサイトを提供してください：
++          1. 全体的な傾向と状態
++          2. 注意が必要な機器やコンポーネント
++          3. 異常パターンの有無
++          4. 推奨される保守アクション
++          5. 今後の監視ポイント`,
++          data: selectedData,
++        }),
++      })
++
++      const result = await response.json()
++
++      if (result.error) {
++        setError(result.error)
++      } else {
++        setInsights(result.result)
++      }
++    } catch (err) {
++      setError("エラーが発生しました。もう一度お試しください。")
++    } finally {
++      setLoading(false)
++    }
++  }
++
++  const renderInsightSection = (content: string) => {
++    const sections = content.split(/\d+\.\s/).filter(Boolean)
++    const titles = [
++      { icon: TrendingUp, title: "全体的な傾向と状態", color: "text-blue-600" },
++      { icon: AlertCircle, title: "注意が必要な機器", color: "text-yellow-600" },
++      { icon: AlertCircle, title: "異常パターン", color: "text-red-600" },
++      { icon: CheckCircle, title: "推奨保守アクション", color: "text-green-600" },
++      { icon: TrendingUp, title: "監視ポイント", color: "text-purple-600" },
++    ]
++
++    return sections.map((section, index) => {
++      if (index >= titles.length) return null
++      const { icon: Icon, title, color } = titles[index]
++      
++      return (
++        <Card key={index} className="mb-4">
++          <CardHeader className="pb-3">
++            <CardTitle className={cn("text-lg flex items-center gap-2", color)}>
++              <Icon className="h-5 w-5" />
++              {title}
++            </CardTitle>
++          </CardHeader>
++          <CardContent>
++            <p className="text-sm text-gray-700 whitespace-pre-wrap">{section.trim()}</p>
++          </CardContent>
++        </Card>
++      )
++    })
++  }
++
++  return (
++    <div className="space-y-6">
++      <div>
++        <h1 className="text-3xl font-bold">AIインサイト分析</h1>
++        <p className="text-gray-600 mt-2">検査データをAIが分析し、重要なインサイトを提供します</p>
++      </div>
++
++      <Card>
++        <CardHeader>
++          <CardTitle>分析設定</CardTitle>
++          <CardDescription>
++            分析したいデータカテゴリーを選択してください
++          </CardDescription>
++        </CardHeader>
++        <CardContent className="space-y-4">
++          <div>
++            <label className="block text-sm font-medium mb-2">データカテゴリー</label>
++            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
++              <SelectTrigger>
++                <SelectValue placeholder="カテゴリーを選択" />
++              </SelectTrigger>
++              <SelectContent>
++                {dataCategories.map((category) => (
++                  <SelectItem key={category.value} value={category.value}>
++                    {category.label}
++                  </SelectItem>
++                ))}
++              </SelectContent>
++            </Select>
++          </div>
++
++          {error && (
++            <div className="text-sm text-red-600">{error}</div>
++          )}
++
++          <Button
++            onClick={handleAnalyzeData}
++            disabled={loading || !selectedCategory}
++            className="w-full"
++          >
++            {loading ? (
++              <>
++                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
++                分析中...
++              </>
++            ) : (
++              <>
++                <Brain className="mr-2 h-4 w-4" />
++                インサイトを分析
++              </>
++            )}
++          </Button>
++        </CardContent>
++      </Card>
++
++      {insights && (
++        <div>
++          <h2 className="text-xl font-semibold mb-4">分析結果</h2>
++          {insights.includes("1.") ? (
++            renderInsightSection(insights)
++          ) : (
++            <Card>
++              <CardContent className="pt-6">
++                <p className="text-sm text-gray-700 whitespace-pre-wrap">{insights}</p>
++              </CardContent>
++            </Card>
++          )}
++        </div>
++      )}
++    </div>
++  )
++}
+\ No newline at end of file
+diff --git a/src/components/layout/sidebar.tsx b/src/components/layout/sidebar.tsx
+index 3fa779d..7e2284c 100644
+--- a/src/components/layout/sidebar.tsx
++++ b/src/components/layout/sidebar.tsx
+@@ -2,7 +2,7 @@
+ 
+ import Link from "next/link"
+ import { usePathname } from "next/navigation"
+-import { ClipboardCheck, ChevronRight } from "lucide-react"
++import { ClipboardCheck, ChevronRight, BarChart3, Brain } from "lucide-react"
+ import { cn } from "@/lib/utils"
+ import { useState } from "react"
+ 
+@@ -29,6 +29,20 @@ const menuItems = [
+       },
+     ],
+   },
++  {
++    title: "AIアシスタント",
++    icon: Brain,
++    subItems: [
++      {
++        title: "グラフ生成",
++        href: "/dashboard/ai/graph-generation",
++      },
++      {
++        title: "インサイト分析",
++        href: "/dashboard/ai/insights-analysis",
++      },
++    ],
++  },
+ ]
+ 
+ export function Sidebar() {
+diff --git a/src/components/ui/select.tsx b/src/components/ui/select.tsx
+new file mode 100644
+index 0000000..a40eb5a
+--- /dev/null
++++ b/src/components/ui/select.tsx
+@@ -0,0 +1,158 @@
++"use client"
++
++import * as React from "react"
++import * as SelectPrimitive from "@radix-ui/react-select"
++import { Check, ChevronDown, ChevronUp } from "lucide-react"
++import { cn } from "@/lib/utils"
++
++const Select = SelectPrimitive.Root
++
++const SelectGroup = SelectPrimitive.Group
++
++const SelectValue = SelectPrimitive.Value
++
++const SelectTrigger = React.forwardRef<
++  React.ElementRef<typeof SelectPrimitive.Trigger>,
++  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
++>(({ className, children, ...props }, ref) => (
++  <SelectPrimitive.Trigger
++    ref={ref}
++    className={cn(
++      "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
++      className
++    )}
++    {...props}
++  >
++    {children}
++    <SelectPrimitive.Icon asChild>
++      <ChevronDown className="h-4 w-4 opacity-50" />
++    </SelectPrimitive.Icon>
++  </SelectPrimitive.Trigger>
++))
++SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
++
++const SelectScrollUpButton = React.forwardRef<
++  React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
++  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollUpButton>
++>(({ className, ...props }, ref) => (
++  <SelectPrimitive.ScrollUpButton
++    ref={ref}
++    className={cn(
++      "flex cursor-default items-center justify-center py-1",
++      className
++    )}
++    {...props}
++  >
++    <ChevronUp className="h-4 w-4" />
++  </SelectPrimitive.ScrollUpButton>
++))
++SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
++
++const SelectScrollDownButton = React.forwardRef<
++  React.ElementRef<typeof SelectPrimitive.ScrollDownButton>,
++  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollDownButton>
++>(({ className, ...props }, ref) => (
++  <SelectPrimitive.ScrollDownButton
++    ref={ref}
++    className={cn(
++      "flex cursor-default items-center justify-center py-1",
++      className
++    )}
++    {...props}
++  >
++    <ChevronDown className="h-4 w-4" />
++  </SelectPrimitive.ScrollDownButton>
++))
++SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
++
++const SelectContent = React.forwardRef<
++  React.ElementRef<typeof SelectPrimitive.Content>,
++  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
++>(({ className, children, position = "popper", ...props }, ref) => (
++  <SelectPrimitive.Portal>
++    <SelectPrimitive.Content
++      ref={ref}
++      className={cn(
++        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
++        position === "popper" &&
++          "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
++        className
++      )}
++      position={position}
++      {...props}
++    >
++      <SelectScrollUpButton />
++      <SelectPrimitive.Viewport
++        className={cn(
++          "p-1",
++          position === "popper" &&
++            "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
++        )}
++      >
++        {children}
++      </SelectPrimitive.Viewport>
++      <SelectScrollDownButton />
++    </SelectPrimitive.Content>
++  </SelectPrimitive.Portal>
++))
++SelectContent.displayName = SelectPrimitive.Content.displayName
++
++const SelectLabel = React.forwardRef<
++  React.ElementRef<typeof SelectPrimitive.Label>,
++  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
++>(({ className, ...props }, ref) => (
++  <SelectPrimitive.Label
++    ref={ref}
++    className={cn("py-1.5 pl-8 pr-2 text-sm font-semibold", className)}
++    {...props}
++  />
++))
++SelectLabel.displayName = SelectPrimitive.Label.displayName
++
++const SelectItem = React.forwardRef<
++  React.ElementRef<typeof SelectPrimitive.Item>,
++  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
++>(({ className, children, ...props }, ref) => (
++  <SelectPrimitive.Item
++    ref={ref}
++    className={cn(
++      "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
++      className
++    )}
++    {...props}
++  >
++    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
++      <SelectPrimitive.ItemIndicator>
++        <Check className="h-4 w-4" />
++      </SelectPrimitive.ItemIndicator>
++    </span>
++
++    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
++  </SelectPrimitive.Item>
++))
++SelectItem.displayName = SelectPrimitive.Item.displayName
++
++const SelectSeparator = React.forwardRef<
++  React.ElementRef<typeof SelectPrimitive.Separator>,
++  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>
++>(({ className, ...props }, ref) => (
++  <SelectPrimitive.Separator
++    ref={ref}
++    className={cn("-mx-1 my-1 h-px bg-muted", className)}
++    {...props}
++  />
++))
++SelectSeparator.displayName = SelectPrimitive.Separator.displayName
++
++export {
++  Select,
++  SelectGroup,
++  SelectValue,
++  SelectTrigger,
++  SelectContent,
++  SelectLabel,
++  SelectItem,
++  SelectSeparator,
++  SelectScrollUpButton,
++  SelectScrollDownButton,
++}
+\ No newline at end of file
+diff --git a/src/components/ui/textarea.tsx b/src/components/ui/textarea.tsx
+new file mode 100644
+index 0000000..1a4eef1
+--- /dev/null
++++ b/src/components/ui/textarea.tsx
+@@ -0,0 +1,23 @@
++import * as React from "react"
++import { cn } from "@/lib/utils"
++
++export interface TextareaProps
++  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
++
++const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
++  ({ className, ...props }, ref) => {
++    return (
++      <textarea
++        className={cn(
++          "flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
++          className
++        )}
++        ref={ref}
++        {...props}
++      />
++    )
++  }
++)
++Textarea.displayName = "Textarea"
++
++export { Textarea }
+\ No newline at end of file
+-- 
+2.39.5 (Apple Git-154)
+

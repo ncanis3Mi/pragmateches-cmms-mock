@@ -1,7 +1,7 @@
 -- Seed data for CMMS database
 
 -- Insert data for equipment_type_master
-INSERT INTO equipment_type_master (設備種別ID, 設備種別名, 説明) VALUES (1, '静機器', '静的な機械設備');
+INSERT INTO equipment_type_master (設備種別ID, 設備種別名, 説明) VALUES (1, '精機器', '高精度な機械設備');
 INSERT INTO equipment_type_master (設備種別ID, 設備種別名, 説明) VALUES (2, '回転機', '回転する機械設備');
 INSERT INTO equipment_type_master (設備種別ID, 設備種別名, 説明) VALUES (3, '電気設備', '電気関連設備');
 INSERT INTO equipment_type_master (設備種別ID, 設備種別名, 説明) VALUES (4, '計装設備', '計測・制御設備');

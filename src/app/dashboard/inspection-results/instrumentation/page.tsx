@@ -15,11 +15,7 @@ export default function InstrumentationPage() {
         .from('inspection_plan')
         .select(`
           *,
-          equipment!inner(
-            設備名,
-            設備タグ,
-            設備種別ID
-          ),
+          equipment!inner(設備名, 設備タグ, 設備種別ID),
           inspection_cycle_master(周期名),
           staff_master(氏名)
         `)

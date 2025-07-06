@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { BarChart3, Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { getDataSchema, askForDataRequirements, aggregateRequestedData } from "@/lib/data-aggregation"
+import { UniversalChart } from '@/components/charts/universal-chart'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -20,7 +21,6 @@ import {
   PointElement,
   LineElement,
 } from 'chart.js'
-import { Bar, Pie, Line } from 'react-chartjs-2'
 
 ChartJS.register(
   CategoryScale,
@@ -50,9 +50,14 @@ function extractChartConfigs(text: string): any[] {
   for (const match of matches) {
     try {
       const config = JSON.parse(match[1])
-      // Convert Chart.js v2 syntax to v4 syntax
-      const convertedConfig = convertChartJSConfig(config)
-      configs.push(convertedConfig)
+      // Handle both Chart.js and Plotly configurations
+      if (config.library === 'plotly') {
+        configs.push(config)
+      } else {
+        // Convert Chart.js v2 syntax to v4 syntax
+        const convertedConfig = convertChartJSConfig(config)
+        configs.push(convertedConfig)
+      }
     } catch (e) {
       console.error('Failed to parse JSON:', e)
     }
@@ -281,11 +286,7 @@ export default function GraphGenerationPage() {
                 <CardTitle>グラフ {index + 1}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-96">
-                  {config.type === 'bar' && <Bar data={config.data} options={config.options || {}} />}
-                  {config.type === 'pie' && <Pie data={config.data} options={config.options || {}} />}
-                  {config.type === 'line' && <Line data={config.data} options={config.options || {}} />}
-                </div>
+                <UniversalChart config={config} height={400} />
               </CardContent>
             </Card>
           ))}

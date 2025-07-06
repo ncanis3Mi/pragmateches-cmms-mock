@@ -18,12 +18,26 @@ Computerized Management System Mock Application
 npm install
 ```
 
-2. 開発サーバーの起動:
+2. 環境変数の設定:
+```bash
+# .env.example を .env.local にコピー
+cp .env.example .env.local
+```
+
+3. `.env.local` を編集して実際のAPI キーを設定:
+- Supabase プロジェクトURL と API キー
+- OpenAI API キー
+
+4. 開発サーバーの起動:
 ```bash
 npm run dev
 ```
 
-3. ブラウザで [http://localhost:3000](http://localhost:3000) を開く
+5. ブラウザで [http://localhost:3000](http://localhost:3000) を開く
+
+## データベース設定
+
+Supabase データベースのセットアップについては `scripts/setup_supabase.md` を参照してください。
 
 ## スクリプト
 

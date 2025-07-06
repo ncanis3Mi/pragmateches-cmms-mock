@@ -12,7 +12,7 @@ const menuItems = [
     icon: ClipboardCheck,
     subItems: [
       {
-        title: "精機器",
+        title: "静機器",
         href: "/dashboard/inspection-results/precision-equipment",
       },
       {

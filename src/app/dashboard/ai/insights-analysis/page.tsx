@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
 
 const dataCategories = [
-  { value: "precision", label: "精機器", typeId: 1 },
+  { value: "precision", label: "静機器", typeId: 1 },
   { value: "rotating", label: "回転機", typeId: 2 },
   { value: "electrical", label: "電気", typeId: 3 },
   { value: "instrumentation", label: "計装", typeId: 4 },

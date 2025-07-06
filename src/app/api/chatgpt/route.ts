@@ -41,25 +41,39 @@ For Chart.js, use v4 syntax:
 For Plotly, use standard Plotly.js format with data array and layout object.`
       userPrompt = `Based on this inspection data: ${JSON.stringify(data)}, ${prompt}. Please analyze the data and create appropriate chart configurations using Chart.js v4 syntax.`
     } else if (type === 'data_requirements') {
-      systemPrompt = `You are a data analysis expert. Given a data schema and user request, determine exactly what data fields and aggregations are needed. Return ONLY a JSON object with the required data specifications.`
+      systemPrompt = `You are a CMMS data analysis expert. Given a data schema and user request, determine exactly what data fields and aggregations are needed. Return ONLY a JSON object with the required data specifications.
+
+IMPORTANT: Understand these key data sources:
+- thickness_measurement: Contains 肉厚測定値(mm), 最小許容肉厚(mm), 測定値(mm), 検査日, 設備ID
+- equipment_risk_assessment: Contains リスクスコア, リスクレベル, 影響度ランク, 信頼性ランク, 設備ID  
+- equipment: Contains 設備名, 設備種別ID, 稼働状態, 重要度, 設備ID
+- maintenance_history: Contains 実施日, コスト, 作業内容
+- inspection_plan: Contains 検査日, 結果, 次回検査日
+
+Match user requests to appropriate tables:
+- "thickness" → thickness_measurement table
+- "risk" or "リスク" → equipment_risk_assessment table  
+- "cost" or "コスト" → maintenance_history table
+- "inspection" or "検査" → inspection_plan table`
       userPrompt = `Data schema: ${JSON.stringify(schema || data)}
       
 User request: "${prompt}"
 
 Based on this request, return a JSON object specifying exactly what data you need:
 {
-  "tables": ["table1", "table2"],
-  "fields": ["field1", "field2"],
-  "aggregations": ["monthly_costs", "equipment_totals", "anomaly_severity"],
+  "tables": ["thickness_measurement", "equipment"],
+  "fields": ["肉厚測定値(mm)", "検査日", "設備名"],
+  "aggregations": ["thickness_time_series", "equipment_totals", "risk_matrix"],
   "time_grouping": "monthly" or "daily" or null,
-  "chart_type": "bar" or "line" or "pie"
+  "chart_type": "line" or "bar" or "pie" or "heatmap"
 }
 
 Available aggregations:
+- thickness_time_series: Thickness measurements over time
+- risk_matrix: Risk assessment matrix (影響度 vs 信頼性)
 - monthly_costs: Monthly maintenance costs over time
 - equipment_totals: Total maintenance per equipment
 - anomaly_severity: Count of anomalies by severity level
-- time_series: Time-based trending data
 
 Only request data that is necessary for the specific visualization.`
     } else if (type === 'insights') {

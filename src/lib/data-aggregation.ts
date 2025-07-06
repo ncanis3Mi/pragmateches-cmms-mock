@@ -99,14 +99,42 @@ export async function askForDataRequirements(schema: DataSchema, userRequest: st
   try {
     // Parse the JSON response containing data requirements
     const requirements = JSON.parse(result.result)
+    
+    // Validate that we got proper arrays, not empty ones
+    if (!requirements.tables || !Array.isArray(requirements.tables) || requirements.tables.length === 0) {
+      throw new Error('Invalid or empty requirements returned')
+    }
+    
     return requirements
   } catch (error) {
     console.error('Failed to parse data requirements:', error)
-    // Fallback to default requirements
+    console.error('AI Response:', result.result)
+    
+    // Smart fallback based on user prompt
+    if (prompt.toLowerCase().includes('thickness')) {
+      return {
+        tables: ['thickness_measurement', 'equipment'],
+        fields: ['肉厚測定値(mm)', '検査日', '設備名'],
+        aggregations: ['thickness_time_series'],
+        time_grouping: 'daily',
+        chart_type: 'line'
+      }
+    } else if (prompt.toLowerCase().includes('risk') || prompt.includes('リスク')) {
+      return {
+        tables: ['equipment_risk_assessment', 'equipment'],
+        fields: ['影響度ランク (5段階)', '信頼性ランク (5段階)', '設備名'],
+        aggregations: ['risk_matrix'],
+        chart_type: 'heatmap'
+      }
+    }
+    
+    // Default fallback
     return {
       tables: ['equipment', 'maintenance_history'],
       fields: ['設備名', '実施日', 'コスト'],
       aggregations: ['monthly_costs', 'equipment_totals'],
+      time_grouping: 'monthly',
+      chart_type: 'bar'
     }
   }
 }
@@ -116,35 +144,37 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
   const { supabase } = await import('@/lib/supabase')
   
   // Base query for equipment
-  let query = supabase
+  const { data: equipmentData } = await supabase
     .from('equipment')
-    .select('*')
+    .select('設備ID, 設備名, 重要度, 稼働状態, 設備種別ID')
     .eq('設備種別ID', categoryTypeId)
 
-  // Add related tables based on requirements
-  if (requirements.tables.includes('maintenance_history')) {
-    query = supabase
-      .from('equipment')
-      .select(`
-        設備ID,
-        設備名,
-        重要度,
-        稼働状態,
-        maintenance_history(*)
-      `)
-      .eq('設備種別ID', categoryTypeId)
+  if (!equipmentData || equipmentData.length === 0) {
+    console.log('No equipment found for category:', categoryTypeId)
+    return {}
   }
 
-  const { data: equipmentData } = await query
-
-  if (!equipmentData) return {}
+  console.log('Found equipment:', equipmentData.length, 'items')
 
   // Perform aggregations based on requirements
   const aggregatedData: any = {}
 
+  // Add equipment basic info
+  aggregatedData.equipment = equipmentData
+
+  // Get maintenance history if needed
+  if (requirements.tables.includes('maintenance_history') || requirements.aggregations.includes('monthly_costs')) {
+    const { data: maintenanceData } = await supabase
+      .from('maintenance_history')
+      .select('*')
+      .in('設備ID', equipmentData.map(eq => eq.設備ID))
+    
+    aggregatedData.maintenance_history = maintenanceData || []
+  }
+
   // Monthly cost aggregation
   if (requirements.aggregations.includes('monthly_costs')) {
-    aggregatedData.monthly_costs = aggregateMonthlyMaintenanceCosts(equipmentData)
+    aggregatedData.monthly_costs = aggregateMonthlyMaintenanceCosts(equipmentData, aggregatedData.maintenance_history)
   }
 
   // Equipment totals
@@ -162,6 +192,35 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
     aggregatedData.anomaly_severity = aggregateAnomalySeverity(anomalyData || [])
   }
 
+  // Thickness time series
+  if (requirements.aggregations.includes('thickness_time_series')) {
+    console.log('Fetching thickness data for equipment IDs:', equipmentData.map(eq => eq.設備ID))
+    const { data: thicknessData, error } = await supabase
+      .from('thickness_measurement')
+      .select('設備ID, 検査日, "肉厚測定値(mm)", "最小許容肉厚(mm)", "測定値(mm)"')
+      .in('設備ID', equipmentData.map(eq => eq.設備ID))
+      .order('検査日', { ascending: true })
+    
+    if (error) {
+      console.error('Error fetching thickness data:', error)
+    } else {
+      console.log('Fetched thickness data:', thicknessData?.length || 0, 'records')
+    }
+    
+    aggregatedData.thickness_data = thicknessData || []
+    aggregatedData.thickness_time_series = aggregateThicknessTimeSeries(thicknessData || [])
+  }
+
+  // Risk matrix
+  if (requirements.aggregations.includes('risk_matrix')) {
+    const { data: riskData } = await supabase
+      .from('equipment_risk_assessment')
+      .select('設備ID, "影響度ランク (5段階)", "信頼性ランク (5段階)", "リスクスコア (再計算)"')
+      .in('設備ID', equipmentData.map(eq => eq.設備ID))
+    
+    aggregatedData.risk_matrix = aggregateRiskMatrix(riskData || [])
+  }
+
   // Time series data
   if (requirements.time_grouping) {
     aggregatedData.time_series = await aggregateTimeSeriesData(
@@ -174,15 +233,13 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
 }
 
 // Helper aggregation functions
-function aggregateMonthlyMaintenanceCosts(equipmentData: any[]): any[] {
+function aggregateMonthlyMaintenanceCosts(equipmentData: any[], maintenanceData: any[] = []): any[] {
   const monthlyData: { [key: string]: number } = {}
   
-  equipmentData.forEach(equipment => {
-    equipment.maintenance_history?.forEach((maintenance: any) => {
-      const date = new Date(maintenance.実施日)
-      const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`
-      monthlyData[monthKey] = (monthlyData[monthKey] || 0) + (maintenance.コスト || 0)
-    })
+  maintenanceData.forEach(maintenance => {
+    const date = new Date(maintenance.実施日)
+    const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`
+    monthlyData[monthKey] = (monthlyData[monthKey] || 0) + (maintenance.コスト || 0)
   })
 
   return Object.entries(monthlyData).map(([month, cost]) => ({
@@ -223,4 +280,47 @@ async function aggregateTimeSeriesData(equipmentData: any[], timeGrouping: strin
   // Implementation depends on time grouping type (daily, weekly, monthly, etc.)
   // This is a placeholder - implement based on specific requirements
   return []
+}
+
+function aggregateThicknessTimeSeries(thicknessData: any[]): any[] {
+  // Group thickness measurements by date and equipment
+  const timeSeriesData = thicknessData.map(measurement => ({
+    date: measurement.検査日,
+    equipment_id: measurement.設備ID,
+    thickness_value: measurement["肉厚測定値(mm)"] || measurement["測定値(mm)"],
+    min_thickness: measurement["最小許容肉厚(mm)"],
+    is_below_threshold: (measurement["肉厚測定値(mm)"] || measurement["測定値(mm)"]) < measurement["最小許容肉厚(mm)"]
+  }))
+
+  return timeSeriesData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+}
+
+function aggregateRiskMatrix(riskData: any[]): any[] {
+  // Create matrix data for heatmap visualization
+  const matrix: { [key: string]: number } = {}
+  
+  riskData.forEach(risk => {
+    const impact = risk["影響度ランク (5段階)"] || 1
+    const reliability = risk["信頼性ランク (5段階)"] || 1
+    const key = `${impact}-${reliability}`
+    matrix[key] = (matrix[key] || 0) + 1
+  })
+
+  // Convert to matrix format for Plotly heatmap
+  const matrixData = []
+  for (let impact = 1; impact <= 5; impact++) {
+    const row = []
+    for (let reliability = 1; reliability <= 5; reliability++) {
+      const key = `${impact}-${reliability}`
+      row.push(matrix[key] || 0)
+    }
+    matrixData.push(row)
+  }
+
+  return {
+    z: matrixData,
+    x: ['信頼性1', '信頼性2', '信頼性3', '信頼性4', '信頼性5'],
+    y: ['影響度1', '影響度2', '影響度3', '影響度4', '影響度5'],
+    type: 'heatmap'
+  }
 }

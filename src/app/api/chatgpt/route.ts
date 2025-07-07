@@ -56,7 +56,13 @@ IMPORTANT: Look for these data structures:
 - risk_matrix: Pre-processed risk matrix data (use this directly for Plotly heatmap)
 - equipment: Basic equipment information
 
-If thickness_time_series exists, use it to create line charts grouped by equipment_id.
+If thickness_time_series exists, use it to create line charts. Each record has:
+- date: measurement date
+- equipment_id: equipment identifier  
+- measurement_point: specific measurement location
+- series_name: unique identifier for each line (equipment_id + measurement_point)
+- thickness_value: measured thickness
+Group by series_name to show multiple lines for different measurement points.
 If risk_matrix exists, it's pre-processed heatmap data. Use it like this:
 {
   "library": "plotly",

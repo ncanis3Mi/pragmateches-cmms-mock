@@ -309,10 +309,12 @@ async function aggregateTimeSeriesData(equipmentData: any[], timeGrouping: strin
 }
 
 function aggregateThicknessTimeSeries(thicknessData: any[]): any[] {
-  // Group thickness measurements by date and equipment
+  // Group thickness measurements by date, equipment, and measurement point
   const timeSeriesData = thicknessData.map(measurement => ({
     date: measurement.検査日,
     equipment_id: measurement.設備ID,
+    measurement_point: measurement.測定点ID,
+    series_name: `${measurement.設備ID}-${measurement.測定点ID}`,
     thickness_value: measurement["測定値(mm)"],
     min_thickness: measurement["最小許容肉厚(mm)"],
     is_below_threshold: measurement["測定値(mm)"] < measurement["最小許容肉厚(mm)"]

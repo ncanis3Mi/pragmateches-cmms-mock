@@ -57,7 +57,23 @@ IMPORTANT: Look for these data structures:
 - equipment: Basic equipment information
 
 If thickness_time_series exists, use it to create line charts grouped by equipment_id.
-If risk_matrix exists, use it directly as Plotly heatmap data (it already has z, x, y arrays).
+If risk_matrix exists, it's pre-processed heatmap data. Use it like this:
+{
+  "library": "plotly",
+  "type": "heatmap",
+  "data": risk_matrix,  // This already contains z, x, y, type
+  "layout": {
+    "title": "リスクマトリクス（影響度 vs 信頼性）",
+    "xaxis": {"title": "信頼性ランク"},
+    "yaxis": {"title": "影響度ランク"},
+    "annotations": [] // Add text annotations for each cell value
+  }
+}
+
+For heatmaps, create annotations to show values in each cell:
+annotations = z.flatMap((row, i) => row.map((value, j) => ({
+  x: j, y: i, text: String(value), showarrow: false
+})))
 
 Remember: Return ONLY JSON code blocks, no explanatory text.`
       userPrompt = `Based on this inspection data: ${JSON.stringify(data)}, ${prompt}. 

@@ -78,23 +78,40 @@ export function UniversalChart({ config, height = 400 }: UniversalChartProps) {
 
     if (config.type === 'heatmap' || config.type === 'matrix') {
       // For heatmap/matrix, data might be in a different format
+      const heatmapData = config.data.z ? config.data : config.data[0] || config.data
+      
+      // Create text annotations for cell values
+      const annotations = []
+      if (heatmapData.z) {
+        heatmapData.z.forEach((row, i) => {
+          row.forEach((value, j) => {
+            annotations.push({
+              x: j,
+              y: i,
+              text: String(value),
+              showarrow: false,
+              font: { color: value > 10 ? 'white' : 'black', size: 16 }
+            })
+          })
+        })
+      }
+      
       plotData = [{
         type: 'heatmap',
-        z: config.data.z || config.data,
-        x: config.data.x,
-        y: config.data.y,
-        text: config.data.text,
-        texttemplate: config.data.texttemplate || '%{text}',
-        textfont: { size: 14 },
-        colorscale: config.data.colorscale || [
-          [0, '#3B82F6'],
-          [0.5, '#FDE047'],
-          [1, '#DC2626']
-        ],
-        showscale: false,
+        z: heatmapData.z,
+        x: heatmapData.x,
+        y: heatmapData.y,
+        colorscale: heatmapData.colorscale || 'YlOrRd',
+        showscale: true,
         hoverongaps: false,
-        ...config.data
+        hovertemplate: '%{y} - %{x}: %{z}<extra></extra>'
       }]
+      
+      // Add annotations to layout
+      layout = {
+        ...layout,
+        annotations: annotations
+      }
     } else if (Array.isArray(config.data)) {
       plotData = config.data
     } else {

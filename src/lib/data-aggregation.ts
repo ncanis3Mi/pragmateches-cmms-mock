@@ -199,14 +199,14 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
     // First, check what equipment IDs exist in thickness_measurement table
     const { data: allThicknessData } = await supabase
       .from('thickness_measurement')
-      .select('機器ID')
+      .select('設備ID')
       .limit(10)
-    console.log('Sample thickness measurement equipment IDs:', allThicknessData?.map(d => d.機器ID))
+    console.log('Sample thickness measurement equipment IDs:', allThicknessData?.map(d => d.設備ID))
     
     const { data: thicknessData, error } = await supabase
       .from('thickness_measurement')
-      .select('機器ID, 検査日, 測定値(mm), 最小許容肉厚(mm)')
-      .in('機器ID', equipmentData.map(eq => eq.設備ID))
+      .select('設備ID, 検査日, 測定値(mm), 最小許容肉厚(mm)')
+      .in('設備ID', equipmentData.map(eq => eq.設備ID))
       .order('検査日', { ascending: true })
     
     if (error) {
@@ -227,7 +227,7 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
   if (requirements.aggregations.includes('risk_matrix')) {
     const { data: riskData } = await supabase
       .from('equipment_risk_assessment')
-      .select('設備ID, "影響度ランク (5段階)", "信頼性ランク (5段階)", "リスクスコア (再計算)"')
+      .select('設備ID, 影響度ランク（5段階）, 信頼性ランク（5段階）, リスクスコア（再計算）')
       .in('設備ID', equipmentData.map(eq => eq.設備ID))
     
     aggregatedData.risk_matrix = aggregateRiskMatrix(riskData || [])
@@ -298,7 +298,7 @@ function aggregateThicknessTimeSeries(thicknessData: any[]): any[] {
   // Group thickness measurements by date and equipment
   const timeSeriesData = thicknessData.map(measurement => ({
     date: measurement.検査日,
-    equipment_id: measurement.機器ID,
+    equipment_id: measurement.設備ID,
     thickness_value: measurement["測定値(mm)"],
     min_thickness: measurement["最小許容肉厚(mm)"],
     is_below_threshold: measurement["測定値(mm)"] < measurement["最小許容肉厚(mm)"]

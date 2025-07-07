@@ -150,6 +150,8 @@ export async function askForDataRequirements(schema: DataSchema, userRequest: st
 export async function aggregateRequestedData(categoryTypeId: number, requirements: DataRequirements): Promise<any> {
   const { supabase } = await import('@/lib/supabase')
   
+  console.log('Requirements received:', requirements)
+  
   // Base query for equipment
   const { data: equipmentData } = await supabase
     .from('equipment')
@@ -178,7 +180,12 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
   const equipmentIds = equipmentData.map(eq => eq.設備ID)
 
   // Fetch requested tables with smart sampling
-  for (const table of requirements.tables) {
+  const requestedTables = requirements.tables || []
+  
+  // If no specific tables requested, fetch common tables for inspection data
+  const tablesToFetch = requestedTables.length > 0 ? requestedTables : ['inspection_plan', 'maintenance_history']
+  
+  for (const table of tablesToFetch) {
     try {
       if (table === 'equipment') continue // Already loaded
 

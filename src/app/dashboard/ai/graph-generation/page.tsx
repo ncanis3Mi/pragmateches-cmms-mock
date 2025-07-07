@@ -110,6 +110,7 @@ export default function GraphGenerationPage() {
   const [chartData, setChartData] = useState<any[]>([])
   const [error, setError] = useState("")
   const [conversationLog, setConversationLog] = useState<any[]>([])
+  const [useDirectAccess, setUseDirectAccess] = useState(false)
 
   const handleGenerateGraph = async () => {
     if (!selectedCategory || !graphRequest) {
@@ -150,31 +151,57 @@ export default function GraphGenerationPage() {
         response: dataRequirements
       })
       
-      // Step 3: Aggregate only the requested data
-      const aggregatedData = await aggregateRequestedData(selectedCategory_info!.typeId, dataRequirements)
+      // Step 3: Get data based on selected approach
+      let dataForAI: any
       
-      if (!aggregatedData) {
-        throw new Error('No data returned from aggregation')
+      if (useDirectAccess) {
+        // Direct approach: Send raw data with schema
+        const aggregatedData = await aggregateRequestedData(selectedCategory_info!.typeId, dataRequirements)
+        if (!aggregatedData) {
+          throw new Error('No data returned from aggregation')
+        }
+        dataForAI = aggregatedData
+      } else {
+        // Pre-aggregated approach: Use reduced data approach
+        const aggregatedData = await aggregateRequestedData(selectedCategory_info!.typeId, dataRequirements)
+        if (!aggregatedData) {
+          throw new Error('No data returned from aggregation')
+        }
+        
+        // Send only processed/aggregated data (smaller payload)
+        dataForAI = {
+          equipment: aggregatedData.equipment?.slice(0, 10),
+          // Add pre-processed versions if available
+          summary: {
+            equipment_count: aggregatedData.equipment?.length || 0,
+            tables_available: Object.keys(aggregatedData).filter(key => key !== 'schema')
+          }
+        }
+        
+        // Add specific table data in smaller chunks
+        for (const [key, value] of Object.entries(aggregatedData)) {
+          if (key !== 'schema' && key !== 'equipment' && Array.isArray(value)) {
+            dataForAI[key] = (value as any[]).slice(0, 50) // Limit to 50 records
+          }
+        }
       }
       log.push({
         step: 3,
         action: "データ集約",
         timestamp: new Date().toLocaleTimeString(),
         details: {
-          aggregated_data_keys: Object.keys(aggregatedData),
-          data_size: JSON.stringify(aggregatedData).length + " bytes"
+          approach: useDirectAccess ? "Direct Data Access" : "Pre-aggregated",
+          data_keys: Object.keys(dataForAI),
+          data_size: JSON.stringify(dataForAI).length + " bytes"
         }
       })
       
       // Step 4: Generate the graph with the targeted data
       console.log('Sending to AI:', {
-        tables_fetched: Object.keys(aggregatedData).filter(key => key !== 'schema'),
-        equipment_count: aggregatedData.equipment?.length || 0,
-        data_size: JSON.stringify(aggregatedData).length + " bytes"
+        approach: useDirectAccess ? "Direct Data Access" : "Pre-aggregated",
+        data_keys: Object.keys(dataForAI),
+        data_size: JSON.stringify(dataForAI).length + " bytes"
       })
-      
-      // Send raw data with schema for flexible analysis
-      const dataForAI = aggregatedData // Now contains raw data + schema
       
       const response = await fetch("/api/chatgpt", {
         method: "POST",
@@ -269,6 +296,22 @@ export default function GraphGenerationPage() {
               onChange={(e) => setGraphRequest(e.target.value)}
               rows={4}
             />
+          </div>
+
+          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+            <input
+              type="checkbox"
+              id="directAccess"
+              checked={useDirectAccess}
+              onChange={(e) => setUseDirectAccess(e.target.checked)}
+              className="rounded"
+            />
+            <label htmlFor="directAccess" className="text-sm font-medium">
+              Alternative Approach - Direct Data Access
+            </label>
+            <span className="text-xs text-gray-500">
+              (より柔軟な分析、より多くのトークン使用)
+            </span>
           </div>
 
           {error && (

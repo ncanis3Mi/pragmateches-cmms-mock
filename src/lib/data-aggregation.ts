@@ -195,6 +195,14 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
   // Thickness time series
   if (requirements.aggregations.includes('thickness_time_series')) {
     console.log('Fetching thickness data for equipment IDs:', equipmentData.map(eq => eq.設備ID))
+    
+    // First, check what equipment IDs exist in thickness_measurement table
+    const { data: allThicknessData } = await supabase
+      .from('thickness_measurement')
+      .select('設備ID')
+      .limit(10)
+    console.log('Sample thickness measurement equipment IDs:', allThicknessData?.map(d => d.設備ID))
+    
     const { data: thicknessData, error } = await supabase
       .from('thickness_measurement')
       .select('設備ID, 検査日, "肉厚測定値(mm)", "最小許容肉厚(mm)", "測定値(mm)"')
@@ -205,10 +213,14 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
       console.error('Error fetching thickness data:', error)
     } else {
       console.log('Fetched thickness data:', thicknessData?.length || 0, 'records')
+      if (thicknessData && thicknessData.length > 0) {
+        console.log('Sample thickness data:', thicknessData[0])
+      }
     }
     
     aggregatedData.thickness_data = thicknessData || []
     aggregatedData.thickness_time_series = aggregateThicknessTimeSeries(thicknessData || [])
+    console.log('Processed thickness_time_series length:', aggregatedData.thickness_time_series.length)
   }
 
   // Risk matrix

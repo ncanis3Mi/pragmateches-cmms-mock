@@ -163,6 +163,12 @@ export default function GraphGenerationPage() {
       })
       
       // Step 4: Generate the graph with the targeted data
+      console.log('Sending to AI:', {
+        thickness_data_length: aggregatedData.thickness_data?.length || 0,
+        thickness_time_series_length: aggregatedData.thickness_time_series?.length || 0,
+        equipment_count: aggregatedData.equipment?.length || 0
+      })
+      
       const response = await fetch("/api/chatgpt", {
         method: "POST",
         headers: {

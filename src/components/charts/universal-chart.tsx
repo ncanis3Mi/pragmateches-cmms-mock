@@ -101,10 +101,22 @@ export function UniversalChart({ config, height = 400 }: UniversalChartProps) {
         z: heatmapData.z,
         x: heatmapData.x,
         y: heatmapData.y,
-        colorscale: heatmapData.colorscale || 'YlOrRd',
+        colorscale: [
+          [0, '#f0f9ff'],      // 信頼度1×影響度1 = pale blue (very light)
+          [0.1, '#e0f2fe'],    // pale
+          [0.2, '#b3e5fc'],    // light blue
+          [0.4, '#81d4fa'],    // medium light
+          [0.6, '#4fc3f7'],    // medium
+          [0.8, '#29b6f6'],    // medium dark
+          [1.0, '#0277bd']     // 信頼度5×影響度5 = deep blue (very dark)
+        ],
         showscale: true,
         hoverongaps: false,
-        hovertemplate: '%{y} - %{x}: %{z}<extra></extra>'
+        hovertemplate: '%{y} - %{x}: %{z}件<extra></extra>',
+        colorbar: {
+          title: '件数',
+          titleside: 'right'
+        }
       }]
       
       // Add annotations to layout

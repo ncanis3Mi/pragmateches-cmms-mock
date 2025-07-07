@@ -70,6 +70,11 @@ Examples:
 For Japanese text values, convert to numbers:
 - 非常に低い=1, 低い=2, 中程度=3, 高い=4, 非常に高い=5
 - 小さい=1, 中程度=3, 大きい=4, 非常に大きい=5
+
+For risk matrix heatmaps, use this color scheme:
+- Low risk (1×1) = pale color
+- High risk (5×5) = deep color  
+- Gradual transition between them
 If risk_matrix exists, it's pre-processed heatmap data. Use it like this:
 {
   "library": "plotly",

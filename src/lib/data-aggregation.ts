@@ -221,12 +221,13 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
 
   // Monthly cost aggregation
   if (requirements.aggregations.includes('monthly_costs')) {
-    aggregatedData.monthly_costs = aggregateMonthlyMaintenanceCosts(equipmentData, aggregatedData.maintenance_history)
+    const maintenanceData = rawData.maintenance_history || []
+    rawData.monthly_costs = aggregateMonthlyMaintenanceCosts(equipmentData, maintenanceData)
   }
 
   // Equipment totals
   if (requirements.aggregations.includes('equipment_totals')) {
-    aggregatedData.equipment_totals = aggregateEquipmentTotals(equipmentData)
+    rawData.equipment_totals = aggregateEquipmentTotals(equipmentData)
   }
 
   // Anomaly severity distribution
@@ -236,7 +237,7 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
       .select('重大度, 設備ID')
       .in('設備ID', equipmentData.map(eq => eq.設備ID))
     
-    aggregatedData.anomaly_severity = aggregateAnomalySeverity(anomalyData || [])
+    rawData.anomaly_severity = aggregateAnomalySeverity(anomalyData || [])
   }
 
   // Thickness time series

@@ -166,8 +166,31 @@ export default function GraphGenerationPage() {
       console.log('Sending to AI:', {
         thickness_data_length: aggregatedData.thickness_data?.length || 0,
         thickness_time_series_length: aggregatedData.thickness_time_series?.length || 0,
+        risk_data_length: aggregatedData.risk_data?.length || 0,
         equipment_count: aggregatedData.equipment?.length || 0
       })
+      
+      // Only send aggregated/processed data to avoid token limits
+      const dataForAI: any = {
+        equipment: aggregatedData.equipment?.slice(0, 10), // Sample equipment only
+      }
+      
+      // Include only the processed data, not raw data
+      if (aggregatedData.thickness_time_series) {
+        dataForAI.thickness_time_series = aggregatedData.thickness_time_series
+      }
+      if (aggregatedData.risk_matrix) {
+        dataForAI.risk_matrix = aggregatedData.risk_matrix
+      }
+      if (aggregatedData.monthly_costs) {
+        dataForAI.monthly_costs = aggregatedData.monthly_costs
+      }
+      if (aggregatedData.equipment_totals) {
+        dataForAI.equipment_totals = aggregatedData.equipment_totals
+      }
+      if (aggregatedData.anomaly_severity) {
+        dataForAI.anomaly_severity = aggregatedData.anomaly_severity
+      }
       
       const response = await fetch("/api/chatgpt", {
         method: "POST",
@@ -177,7 +200,7 @@ export default function GraphGenerationPage() {
         body: JSON.stringify({
           type: "graph",
           prompt: graphRequest,
-          data: aggregatedData,
+          data: dataForAI,
         }),
       })
 

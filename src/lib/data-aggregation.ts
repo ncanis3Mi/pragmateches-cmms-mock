@@ -111,15 +111,15 @@ export async function askForDataRequirements(schema: DataSchema, userRequest: st
     console.error('AI Response:', result.result)
     
     // Smart fallback based on user prompt
-    if (prompt.toLowerCase().includes('thickness')) {
+    if (userRequest.toLowerCase().includes('thickness')) {
       return {
         tables: ['thickness_measurement', 'equipment'],
-        fields: ['肉厚測定値(mm)', '検査日', '設備名'],
+        fields: ['測定値(mm)', '検査日', '設備名'],
         aggregations: ['thickness_time_series'],
         time_grouping: 'daily',
         chart_type: 'line'
       }
-    } else if (prompt.toLowerCase().includes('risk') || prompt.includes('リスク')) {
+    } else if (userRequest.toLowerCase().includes('risk') || userRequest.includes('リスク')) {
       return {
         tables: ['equipment_risk_assessment', 'equipment'],
         fields: ['影響度ランク (5段階)', '信頼性ランク (5段階)', '設備名'],
@@ -199,15 +199,15 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
     // First, check what equipment IDs exist in thickness_measurement table
     const { data: allThicknessData } = await supabase
       .from('thickness_measurement')
-      .select('設備ID')
+      .select('"機器ID"')
       .limit(10)
-    console.log('Sample thickness measurement equipment IDs:', allThicknessData?.map(d => d.設備ID))
+    console.log('Sample thickness measurement equipment IDs:', allThicknessData?.map(d => d.機器ID))
     
     const { data: thicknessData, error } = await supabase
       .from('thickness_measurement')
-      .select('設備ID, 検査日, "肉厚測定値(mm)", "最小許容肉厚(mm)", "測定値(mm)"')
-      .in('設備ID', equipmentData.map(eq => eq.設備ID))
-      .order('検査日', { ascending: true })
+      .select('"機器ID", "検査日", "測定値(mm)", "最小許容肉厚(mm)"')
+      .in('"機器ID"', equipmentData.map(eq => eq.設備ID))
+      .order('"検査日"', { ascending: true })
     
     if (error) {
       console.error('Error fetching thickness data:', error)
@@ -298,10 +298,10 @@ function aggregateThicknessTimeSeries(thicknessData: any[]): any[] {
   // Group thickness measurements by date and equipment
   const timeSeriesData = thicknessData.map(measurement => ({
     date: measurement.検査日,
-    equipment_id: measurement.設備ID,
-    thickness_value: measurement["肉厚測定値(mm)"] || measurement["測定値(mm)"],
+    equipment_id: measurement.機器ID,
+    thickness_value: measurement["測定値(mm)"],
     min_thickness: measurement["最小許容肉厚(mm)"],
-    is_below_threshold: (measurement["肉厚測定値(mm)"] || measurement["測定値(mm)"]) < measurement["最小許容肉厚(mm)"]
+    is_below_threshold: measurement["測定値(mm)"] < measurement["最小許容肉厚(mm)"]
   }))
 
   return timeSeriesData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())

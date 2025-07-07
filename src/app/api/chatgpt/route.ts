@@ -26,7 +26,7 @@ IMPORTANT: First determine which library to use:
 - Use "library": "chartjs" for: bar, line, pie, doughnut, radar, scatter charts
 - Use "library": "plotly" for: heatmap, matrix, 3D, sankey, treemap, box plot, or any complex visualization
 
-Return ONLY valid JSON configurations wrapped in markdown code blocks (using \`\`\`json). Each configuration MUST include:
+You MUST return ONLY valid JSON configurations wrapped in markdown code blocks (using \`\`\`json). Do NOT include any explanatory text outside the JSON blocks. Each configuration MUST include:
 {
   "library": "chartjs" or "plotly",
   "type": "chart type",
@@ -45,12 +45,18 @@ IMPORTANT: Look for these data structures:
 - thickness_time_series: Processed time series data with date, equipment_id, thickness_value
 - equipment: Basic equipment information
 
-If thickness_time_series exists, use it to create line charts grouped by equipment_id.`
+If thickness_time_series exists, use it to create line charts grouped by equipment_id.
+
+Remember: Return ONLY JSON code blocks, no explanatory text.`
       userPrompt = `Based on this inspection data: ${JSON.stringify(data)}, ${prompt}. 
 
-IMPORTANT: Check if thickness_data or thickness_time_series exists in the data. If present, use that data to create the visualization. The thickness_time_series contains processed data with date, equipment_id, and thickness_value fields.
+IMPORTANT: 
+1. Check if thickness_data or thickness_time_series exists in the data. If present, use that data to create the visualization.
+2. The thickness_time_series contains processed data with date, equipment_id, and thickness_value fields.
+3. Return ONLY JSON configurations in markdown code blocks. NO explanatory text.
+4. If data is missing, still return a valid JSON configuration with empty data arrays.
 
-Please analyze the data and create appropriate chart configurations.`
+Create the chart configuration now.`
     } else if (type === 'data_requirements') {
       systemPrompt = `You are a CMMS data analysis expert. Given a data schema and user request, determine exactly what data fields and aggregations are needed. Return ONLY a JSON object with the required data specifications.
 

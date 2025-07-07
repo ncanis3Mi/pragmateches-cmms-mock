@@ -43,9 +43,12 @@ For Plotly, use standard Plotly.js format with data array and layout object.
 IMPORTANT: Look for these data structures:
 - thickness_data: Raw thickness measurement records
 - thickness_time_series: Processed time series data with date, equipment_id, thickness_value
+- risk_data: Raw risk assessment records
+- risk_matrix: Pre-processed risk matrix data (use this directly for Plotly heatmap)
 - equipment: Basic equipment information
 
 If thickness_time_series exists, use it to create line charts grouped by equipment_id.
+If risk_matrix exists, use it directly as Plotly heatmap data (it already has z, x, y arrays).
 
 Remember: Return ONLY JSON code blocks, no explanatory text.`
       userPrompt = `Based on this inspection data: ${JSON.stringify(data)}, ${prompt}. 

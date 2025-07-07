@@ -225,11 +225,18 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
 
   // Risk matrix
   if (requirements.aggregations.includes('risk_matrix')) {
-    const { data: riskData } = await supabase
+    const { data: riskData, error } = await supabase
       .from('equipment_risk_assessment')
-      .select('設備ID, 影響度ランク（5段階）, 信頼性ランク（5段階）, リスクスコア（再計算）')
+      .select('*')
       .in('設備ID', equipmentData.map(eq => eq.設備ID))
     
+    if (error) {
+      console.error('Error fetching risk data:', error)
+    } else {
+      console.log('Fetched risk data:', riskData?.length || 0, 'records')
+    }
+    
+    aggregatedData.risk_data = riskData || []
     aggregatedData.risk_matrix = aggregateRiskMatrix(riskData || [])
   }
 
@@ -307,13 +314,36 @@ function aggregateThicknessTimeSeries(thicknessData: any[]): any[] {
   return timeSeriesData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 }
 
-function aggregateRiskMatrix(riskData: any[]): any[] {
+function aggregateRiskMatrix(riskData: any[]): any {
   // Create matrix data for heatmap visualization
   const matrix: { [key: string]: number } = {}
   
+  // Map text values to numeric values
+  const textToNumber: { [key: string]: number } = {
+    '非常に低い': 1,
+    '低い': 2,
+    '中程度': 3,
+    '高い': 4,
+    '非常に高い': 5,
+    '小さい': 1,
+    '中程度': 3,
+    '大きい': 4,
+    '非常に大きい': 5
+  }
+  
   riskData.forEach(risk => {
-    const impact = risk["影響度ランク (5段階)"] || 1
-    const reliability = risk["信頼性ランク (5段階)"] || 1
+    // Handle both text and numeric values
+    let impact = risk["影響度ランク（5段階）"] || risk["影響度ランク (5段階)"] || 1
+    let reliability = risk["信頼性ランク（5段階）"] || risk["信頼性ランク (5段階)"] || 1
+    
+    // Convert text to numbers if needed
+    if (typeof impact === 'string') {
+      impact = textToNumber[impact] || 3
+    }
+    if (typeof reliability === 'string') {
+      reliability = textToNumber[reliability] || 3
+    }
+    
     const key = `${impact}-${reliability}`
     matrix[key] = (matrix[key] || 0) + 1
   })
@@ -333,6 +363,8 @@ function aggregateRiskMatrix(riskData: any[]): any[] {
     z: matrixData,
     x: ['信頼性1', '信頼性2', '信頼性3', '信頼性4', '信頼性5'],
     y: ['影響度1', '影響度2', '影響度3', '影響度4', '影響度5'],
-    type: 'heatmap'
+    type: 'heatmap',
+    colorscale: 'YlOrRd',
+    showscale: true
   }
 }

@@ -38,8 +38,19 @@ For Chart.js, use v4 syntax:
 - Use "scales": {"y": {"beginAtZero": true}} instead of "yAxes"
 - Use "plugins": {"title": {"display": true, "text": "Title"}}
 
-For Plotly, use standard Plotly.js format with data array and layout object.`
-      userPrompt = `Based on this inspection data: ${JSON.stringify(data)}, ${prompt}. Please analyze the data and create appropriate chart configurations using Chart.js v4 syntax.`
+For Plotly, use standard Plotly.js format with data array and layout object.
+
+IMPORTANT: Look for these data structures:
+- thickness_data: Raw thickness measurement records
+- thickness_time_series: Processed time series data with date, equipment_id, thickness_value
+- equipment: Basic equipment information
+
+If thickness_time_series exists, use it to create line charts grouped by equipment_id.`
+      userPrompt = `Based on this inspection data: ${JSON.stringify(data)}, ${prompt}. 
+
+IMPORTANT: Check if thickness_data or thickness_time_series exists in the data. If present, use that data to create the visualization. The thickness_time_series contains processed data with date, equipment_id, and thickness_value fields.
+
+Please analyze the data and create appropriate chart configurations.`
     } else if (type === 'data_requirements') {
       systemPrompt = `You are a CMMS data analysis expert. Given a data schema and user request, determine exactly what data fields and aggregations are needed. Return ONLY a JSON object with the required data specifications.
 

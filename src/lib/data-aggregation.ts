@@ -146,7 +146,7 @@ export async function askForDataRequirements(schema: DataSchema, userRequest: st
   }
 }
 
-// Aggregate data based on AI requirements
+// Fetch raw data based on AI requirements  
 export async function aggregateRequestedData(categoryTypeId: number, requirements: DataRequirements): Promise<any> {
   const { supabase } = await import('@/lib/supabase')
   
@@ -163,40 +163,52 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
 
   console.log('Found equipment:', equipmentData.length, 'items')
 
-  // Perform aggregations based on requirements
-  const aggregatedData: any = {}
-
-  // Add equipment basic info
-  aggregatedData.equipment = equipmentData
-
-  // Get maintenance history if needed
-  if (requirements.tables.includes('maintenance_history') || requirements.aggregations.includes('monthly_costs')) {
-    const { data: maintenanceData } = await supabase
-      .from('maintenance_history')
-      .select('*')
-      .in('設備ID', equipmentData.map(eq => eq.設備ID))
-    
-    aggregatedData.maintenance_history = maintenanceData || []
+  // Prepare raw data with smart sampling
+  const rawData: any = {
+    equipment: equipmentData.slice(0, 50), // Limit equipment records
+    schema: {
+      equipment: {
+        columns: ['設備ID', '設備名', '重要度', '稼働状態', '設備種別ID'],
+        primary_key: '設備ID',
+        description: 'Equipment master data'
+      }
+    }
   }
 
-  // Get inspection plan data if needed
-  if (requirements.tables.includes('inspection_plan')) {
-    const { data: inspectionData, error } = await supabase
-      .from('inspection_plan')
-      .select('*')
-      .in('設備ID', equipmentData.map(eq => eq.設備ID))
-    
-    if (error) {
-      console.error('Error fetching inspection data:', error)
-    } else {
-      console.log('Fetched inspection data:', inspectionData?.length || 0, 'records')
-    }
-    
-    aggregatedData.inspection_data = inspectionData || []
-    
-    // Monthly inspection results aggregation
-    if (requirements.time_grouping === 'monthly') {
-      aggregatedData.monthly_inspections = aggregateMonthlyInspections(inspectionData || [])
+  const equipmentIds = equipmentData.map(eq => eq.設備ID)
+
+  // Fetch requested tables with smart sampling
+  for (const table of requirements.tables) {
+    try {
+      if (table === 'equipment') continue // Already loaded
+
+      const { data, error } = await supabase
+        .from(table)
+        .select('*')
+        .in('設備ID', equipmentIds)
+        .limit(200) // Smart sampling - limit records per table
+
+      if (error) {
+        console.error(`Error fetching ${table}:`, error)
+        continue
+      }
+
+      console.log(`Fetched ${table}:`, data?.length || 0, 'records')
+      
+      // Add to raw data
+      rawData[table] = data || []
+      
+      // Add schema info
+      if (data && data.length > 0) {
+        rawData.schema[table] = {
+          columns: Object.keys(data[0]),
+          sample_record: data[0],
+          record_count: data.length,
+          description: getTableDescription(table)
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to fetch ${table}:`, err)
     }
   }
 
@@ -276,7 +288,19 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
     )
   }
 
-  return aggregatedData
+  return rawData
+}
+
+// Helper function to provide table descriptions
+function getTableDescription(tableName: string): string {
+  const descriptions: { [key: string]: string } = {
+    'maintenance_history': '設備のメンテナンス履歴（実施日、コスト、作業内容）',
+    'thickness_measurement': '肉厚測定データ（測定値、検査日、測定点）',
+    'equipment_risk_assessment': 'リスク評価データ（影響度、信頼性、リスクスコア）',
+    'inspection_plan': '点検計画データ（点検日、状態、点検項目）',
+    'anomaly_report': '異常報告データ（発生日時、重大度、症状）'
+  }
+  return descriptions[tableName] || `${tableName}のデータ`
 }
 
 // Helper aggregation functions

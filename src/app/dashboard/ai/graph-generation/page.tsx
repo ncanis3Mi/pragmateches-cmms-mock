@@ -170,33 +170,8 @@ export default function GraphGenerationPage() {
         equipment_count: aggregatedData.equipment?.length || 0
       })
       
-      // Only send aggregated/processed data to avoid token limits
-      const dataForAI: any = {
-        equipment: aggregatedData.equipment?.slice(0, 10), // Sample equipment only
-      }
-      
-      // Include only the processed data, not raw data
-      if (aggregatedData.thickness_time_series) {
-        dataForAI.thickness_time_series = aggregatedData.thickness_time_series
-      }
-      if (aggregatedData.risk_matrix) {
-        dataForAI.risk_matrix = aggregatedData.risk_matrix
-      }
-      if (aggregatedData.monthly_costs) {
-        dataForAI.monthly_costs = aggregatedData.monthly_costs
-      }
-      if (aggregatedData.equipment_totals) {
-        dataForAI.equipment_totals = aggregatedData.equipment_totals
-      }
-      if (aggregatedData.anomaly_severity) {
-        dataForAI.anomaly_severity = aggregatedData.anomaly_severity
-      }
-      if (aggregatedData.monthly_inspections) {
-        dataForAI.monthly_inspections = aggregatedData.monthly_inspections
-      }
-      if (aggregatedData.inspection_data) {
-        dataForAI.inspection_data = aggregatedData.inspection_data?.slice(0, 20) // Sample only
-      }
+      // Send raw data with schema for flexible analysis
+      const dataForAI = aggregatedData // Now contains raw data + schema
       
       const response = await fetch("/api/chatgpt", {
         method: "POST",

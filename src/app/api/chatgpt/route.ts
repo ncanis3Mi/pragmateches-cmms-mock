@@ -49,24 +49,27 @@ For Chart.js, use v4 syntax:
 
 For Plotly, use standard Plotly.js format with data array and layout object.
 
-IMPORTANT: Look for these data structures:
-- thickness_data: Raw thickness measurement records
-- thickness_time_series: Processed time series data with date, equipment_id, thickness_value
-- risk_data: Raw risk assessment records
-- risk_matrix: Pre-processed risk matrix data (use this directly for Plotly heatmap)
-- inspection_data: Raw inspection plan records
-- monthly_inspections: Monthly inspection statistics (total, completed, pending, completion_rate)
-- equipment: Basic equipment information
+IMPORTANT: You receive RAW DATA + SCHEMA. Analyze the data structure and create appropriate aggregations on-demand.
 
-If thickness_time_series exists, use it to create line charts. Each record has:
-- date: measurement date
-- equipment_id: equipment identifier  
-- measurement_point: specific measurement location (Shell-1, Shell-2, etc.)
-- series_name: unique identifier for each line (equipment_id + measurement_point)
-- thickness_value: measured thickness
+Data structure:
+- Raw table data: thickness_measurement, equipment_risk_assessment, maintenance_history, inspection_plan, etc.
+- Schema: Column definitions, sample records, descriptions for each table
 
-IMPORTANT: Group by series_name and use the actual measurement_point names in the legend, not generic names like "Point 1". 
-For example: use "Shell-1", "Shell-2", "Shell-3" as the series names in the chart legend.
+Your task:
+1. Analyze the raw data to understand relationships (join by 設備ID)
+2. Create appropriate aggregations based on user request
+3. Generate chart configurations
+
+Examples:
+- Time series: Group thickness_measurement by date + measurement point
+- Risk matrix: Create 5x5 matrix from equipment_risk_assessment (影響度 vs 信頼性)  
+- Pie charts: Count equipment by category, failure types, etc.
+- Bar charts: Sum costs by month, count by equipment, etc.
+- Scatter plots: Plot correlations between any numeric fields
+
+For Japanese text values, convert to numbers:
+- 非常に低い=1, 低い=2, 中程度=3, 高い=4, 非常に高い=5
+- 小さい=1, 中程度=3, 大きい=4, 非常に大きい=5
 If risk_matrix exists, it's pre-processed heatmap data. Use it like this:
 {
   "library": "plotly",

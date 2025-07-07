@@ -265,9 +265,9 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
       }
     }
     
-    aggregatedData.thickness_data = thicknessData || []
-    aggregatedData.thickness_time_series = aggregateThicknessTimeSeries(thicknessData || [])
-    console.log('Processed thickness_time_series length:', aggregatedData.thickness_time_series.length)
+    rawData.thickness_measurement = thicknessData || []
+    rawData.thickness_time_series = aggregateThicknessTimeSeries(thicknessData || [])
+    console.log('Processed thickness_time_series length:', rawData.thickness_time_series.length)
   }
 
   // Risk matrix
@@ -283,13 +283,13 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
       console.log('Fetched risk data:', riskData?.length || 0, 'records')
     }
     
-    aggregatedData.risk_data = riskData || []
-    aggregatedData.risk_matrix = aggregateRiskMatrix(riskData || [])
+    rawData.equipment_risk_assessment = riskData || []
+    rawData.risk_matrix = aggregateRiskMatrix(riskData || [])
   }
 
   // Time series data
   if (requirements.time_grouping) {
-    aggregatedData.time_series = await aggregateTimeSeriesData(
+    rawData.time_series = await aggregateTimeSeriesData(
       equipmentData,
       requirements.time_grouping
     )

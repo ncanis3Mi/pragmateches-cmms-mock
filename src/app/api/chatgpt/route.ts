@@ -59,10 +59,12 @@ IMPORTANT: Look for these data structures:
 If thickness_time_series exists, use it to create line charts. Each record has:
 - date: measurement date
 - equipment_id: equipment identifier  
-- measurement_point: specific measurement location
+- measurement_point: specific measurement location (Shell-1, Shell-2, etc.)
 - series_name: unique identifier for each line (equipment_id + measurement_point)
 - thickness_value: measured thickness
-Group by series_name to show multiple lines for different measurement points.
+
+IMPORTANT: Group by series_name and use the actual measurement_point names in the legend, not generic names like "Point 1". 
+For example: use "Shell-1", "Shell-2", "Shell-3" as the series names in the chart legend.
 If risk_matrix exists, it's pre-processed heatmap data. Use it like this:
 {
   "library": "plotly",

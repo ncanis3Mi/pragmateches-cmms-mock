@@ -199,15 +199,15 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
     // First, check what equipment IDs exist in thickness_measurement table
     const { data: allThicknessData } = await supabase
       .from('thickness_measurement')
-      .select('"機器ID"')
+      .select('機器ID')
       .limit(10)
     console.log('Sample thickness measurement equipment IDs:', allThicknessData?.map(d => d.機器ID))
     
     const { data: thicknessData, error } = await supabase
       .from('thickness_measurement')
-      .select('"機器ID", "検査日", "測定値(mm)", "最小許容肉厚(mm)"')
-      .in('"機器ID"', equipmentData.map(eq => eq.設備ID))
-      .order('"検査日"', { ascending: true })
+      .select('機器ID, 検査日, 測定値(mm), 最小許容肉厚(mm)')
+      .in('機器ID', equipmentData.map(eq => eq.設備ID))
+      .order('検査日', { ascending: true })
     
     if (error) {
       console.error('Error fetching thickness data:', error)

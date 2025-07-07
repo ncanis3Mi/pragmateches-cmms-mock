@@ -97,8 +97,15 @@ export async function askForDataRequirements(schema: DataSchema, userRequest: st
   const result = await response.json()
   
   try {
+    // Extract JSON from markdown code blocks if present
+    let jsonString = result.result
+    const jsonMatch = jsonString.match(/```json\n([\s\S]*?)```/)
+    if (jsonMatch) {
+      jsonString = jsonMatch[1]
+    }
+    
     // Parse the JSON response containing data requirements
-    const requirements = JSON.parse(result.result)
+    const requirements = JSON.parse(jsonString)
     
     // Validate that we got proper arrays, not empty ones
     if (!requirements.tables || !Array.isArray(requirements.tables) || requirements.tables.length === 0) {

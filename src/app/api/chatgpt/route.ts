@@ -70,7 +70,7 @@ IMPORTANT:
 
 Create the chart configuration now.`
     } else if (type === 'data_requirements') {
-      systemPrompt = `You are a CMMS data analysis expert. Given a data schema and user request, determine exactly what data fields and aggregations are needed. Return ONLY a JSON object with the required data specifications.
+      systemPrompt = `You are a CMMS data analysis expert. Given a data schema and user request, determine exactly what data fields and aggregations are needed. Return ONLY a JSON object with the required data specifications. Do NOT wrap the JSON in markdown code blocks or any other formatting.
 
 IMPORTANT: Understand these key data sources:
 - thickness_measurement: Contains 肉厚測定値(mm), 最小許容肉厚(mm), 測定値(mm), 検査日, 設備ID

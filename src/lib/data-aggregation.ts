@@ -205,7 +205,7 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
     
     const { data: thicknessData, error } = await supabase
       .from('thickness_measurement')
-      .select('設備ID, 検査日, 測定値(mm), 最小許容肉厚(mm)')
+      .select('*')
       .in('設備ID', equipmentData.map(eq => eq.設備ID))
       .order('検査日', { ascending: true })
     

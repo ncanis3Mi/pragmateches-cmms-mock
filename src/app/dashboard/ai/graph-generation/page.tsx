@@ -191,6 +191,12 @@ export default function GraphGenerationPage() {
       if (aggregatedData.anomaly_severity) {
         dataForAI.anomaly_severity = aggregatedData.anomaly_severity
       }
+      if (aggregatedData.monthly_inspections) {
+        dataForAI.monthly_inspections = aggregatedData.monthly_inspections
+      }
+      if (aggregatedData.inspection_data) {
+        dataForAI.inspection_data = aggregatedData.inspection_data?.slice(0, 20) // Sample only
+      }
       
       const response = await fetch("/api/chatgpt", {
         method: "POST",

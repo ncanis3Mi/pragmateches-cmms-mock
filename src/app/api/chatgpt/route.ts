@@ -54,6 +54,8 @@ IMPORTANT: Look for these data structures:
 - thickness_time_series: Processed time series data with date, equipment_id, thickness_value
 - risk_data: Raw risk assessment records
 - risk_matrix: Pre-processed risk matrix data (use this directly for Plotly heatmap)
+- inspection_data: Raw inspection plan records
+- monthly_inspections: Monthly inspection statistics (total, completed, pending, completion_rate)
 - equipment: Basic equipment information
 
 If thickness_time_series exists, use it to create line charts. Each record has:

@@ -179,6 +179,27 @@ export async function aggregateRequestedData(categoryTypeId: number, requirement
     aggregatedData.maintenance_history = maintenanceData || []
   }
 
+  // Get inspection plan data if needed
+  if (requirements.tables.includes('inspection_plan')) {
+    const { data: inspectionData, error } = await supabase
+      .from('inspection_plan')
+      .select('*')
+      .in('設備ID', equipmentData.map(eq => eq.設備ID))
+    
+    if (error) {
+      console.error('Error fetching inspection data:', error)
+    } else {
+      console.log('Fetched inspection data:', inspectionData?.length || 0, 'records')
+    }
+    
+    aggregatedData.inspection_data = inspectionData || []
+    
+    // Monthly inspection results aggregation
+    if (requirements.time_grouping === 'monthly') {
+      aggregatedData.monthly_inspections = aggregateMonthlyInspections(inspectionData || [])
+    }
+  }
+
   // Monthly cost aggregation
   if (requirements.aggregations.includes('monthly_costs')) {
     aggregatedData.monthly_costs = aggregateMonthlyMaintenanceCosts(equipmentData, aggregatedData.maintenance_history)
@@ -286,6 +307,36 @@ function aggregateEquipmentTotals(equipmentData: any[]): any[] {
       ? equipment.maintenance_history.reduce((sum: number, m: any) => sum + (m.コスト || 0), 0) / equipment.maintenance_history.length
       : 0
   }))
+}
+
+function aggregateMonthlyInspections(inspectionData: any[]): any[] {
+  const monthlyData: { [key: string]: { total: number, completed: number, pending: number } } = {}
+  
+  inspectionData.forEach(inspection => {
+    const date = new Date(inspection.最終点検日 || inspection.次回点検日)
+    const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`
+    
+    if (!monthlyData[monthKey]) {
+      monthlyData[monthKey] = { total: 0, completed: 0, pending: 0 }
+    }
+    
+    monthlyData[monthKey].total++
+    
+    if (inspection.状態 === '完了') {
+      monthlyData[monthKey].completed++
+    } else {
+      monthlyData[monthKey].pending++
+    }
+  })
+
+  return Object.entries(monthlyData).map(([month, counts]) => ({
+    month,
+    month_label: `${month}月`,
+    total_inspections: counts.total,
+    completed_inspections: counts.completed,
+    pending_inspections: counts.pending,
+    completion_rate: counts.total > 0 ? Math.round((counts.completed / counts.total) * 100) : 0
+  })).sort((a, b) => a.month.localeCompare(b.month))
 }
 
 function aggregateAnomalySeverity(anomalyData: any[]): any[] {

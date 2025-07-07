@@ -152,6 +152,10 @@ export default function GraphGenerationPage() {
       
       // Step 3: Aggregate only the requested data
       const aggregatedData = await aggregateRequestedData(selectedCategory_info!.typeId, dataRequirements)
+      
+      if (!aggregatedData) {
+        throw new Error('No data returned from aggregation')
+      }
       log.push({
         step: 3,
         action: "データ集約",
@@ -164,10 +168,9 @@ export default function GraphGenerationPage() {
       
       // Step 4: Generate the graph with the targeted data
       console.log('Sending to AI:', {
-        thickness_data_length: aggregatedData.thickness_data?.length || 0,
-        thickness_time_series_length: aggregatedData.thickness_time_series?.length || 0,
-        risk_data_length: aggregatedData.risk_data?.length || 0,
-        equipment_count: aggregatedData.equipment?.length || 0
+        tables_fetched: Object.keys(aggregatedData).filter(key => key !== 'schema'),
+        equipment_count: aggregatedData.equipment?.length || 0,
+        data_size: JSON.stringify(aggregatedData).length + " bytes"
       })
       
       // Send raw data with schema for flexible analysis

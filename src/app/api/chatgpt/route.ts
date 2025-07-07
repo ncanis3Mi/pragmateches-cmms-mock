@@ -7,6 +7,15 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if API key is configured
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY is not configured')
+      return NextResponse.json(
+        { error: 'OpenAI API key is not configured. Please set OPENAI_API_KEY environment variable.' },
+        { status: 500 }
+      )
+    }
+
     const { prompt, type, data, schema } = await request.json()
 
     if (!prompt || !type) {
@@ -115,10 +124,33 @@ Only request data that is necessary for the specific visualization.`
       result: completion.choices[0].message.content,
       usage: completion.usage,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('ChatGPT API error:', error)
+    
+    // Provide more specific error messages
+    if (error?.response?.status === 401) {
+      return NextResponse.json(
+        { error: 'Invalid OpenAI API key. Please check your API key configuration.' },
+        { status: 500 }
+      )
+    }
+    
+    if (error?.response?.status === 429) {
+      return NextResponse.json(
+        { error: 'OpenAI API rate limit exceeded. Please try again later.' },
+        { status: 429 }
+      )
+    }
+    
+    if (error?.message?.includes('apiKey')) {
+      return NextResponse.json(
+        { error: 'OpenAI API key configuration error. Please check environment variables.' },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to process request' },
+      { error: `Failed to process request: ${error?.message || 'Unknown error'}` },
       { status: 500 }
     )
   }

@@ -210,9 +210,14 @@ export default function GraphGenerationPage() {
           setGraphConfig({ text: result.result })
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Graph generation error:', err)
-      setError("エラーが発生しました。もう一度お試しください。")
+      // Display more specific error message if available
+      if (err?.message) {
+        setError(`エラー: ${err.message}`)
+      } else {
+        setError("エラーが発生しました。もう一度お試しください。")
+      }
     } finally {
       setLoading(false)
     }

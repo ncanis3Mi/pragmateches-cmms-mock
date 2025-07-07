@@ -115,9 +115,9 @@ Only request data that is necessary for the specific visualization.`
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      model: 'gpt-4',
+      model: 'gpt-4-turbo-preview',
       temperature: 0.7,
-      max_tokens: 1000,
+      max_tokens: 2000,
     })
 
     return NextResponse.json({

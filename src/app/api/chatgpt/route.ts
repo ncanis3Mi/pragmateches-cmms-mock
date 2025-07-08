@@ -189,3 +189,35 @@ Only request data that is necessary for the specific visualization.`
     )
   }
 }
+
+// Add task generation endpoint as GET method
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const action = searchParams.get('action')
+    const strategyId = searchParams.get('strategy_id')
+    
+    if (action === 'generate-task') {
+      // Simple task generation test
+      return NextResponse.json({ 
+        message: 'Task generation endpoint working via chatgpt route',
+        strategyId: strategyId,
+        timestamp: new Date().toISOString(),
+        success: true
+      })
+    }
+    
+    return NextResponse.json({ 
+      error: 'GET method requires action=generate-task parameter' 
+    }, { status: 400 })
+
+  } catch (error: any) {
+    return NextResponse.json(
+      { 
+        error: 'Internal server error',
+        details: error.message 
+      },
+      { status: 500 }
+    )
+  }
+}

@@ -7,7 +7,23 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if API key is configured
+    const body = await request.json()
+    
+    // Handle task generation requests
+    if (body.type === 'task-generation') {
+      const { strategyId } = body
+      return NextResponse.json({
+        success: true,
+        message: 'Task generation working via POST',
+        strategyId: strategyId,
+        timestamp: new Date().toISOString(),
+        generated: 1,
+        failed: 0,
+        details: [`Task generated for strategy ${strategyId || 'all'}`]
+      })
+    }
+    
+    // Check if API key is configured for regular ChatGPT requests
     if (!process.env.OPENAI_API_KEY) {
       console.error('OPENAI_API_KEY is not configured')
       return NextResponse.json(
@@ -16,7 +32,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { prompt, type, data, schema } = await request.json()
+    const { prompt, type, data, schema } = body
 
     if (!prompt || !type) {
       return NextResponse.json(

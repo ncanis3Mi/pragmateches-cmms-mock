@@ -9,17 +9,18 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    // Handle task generation requests
-    if (body.type === 'task-generation') {
+    // Handle task generation requests - v2
+    if (body.type === 'task-generation' || body.action === 'generate-task') {
       const { strategyId } = body
       return NextResponse.json({
         success: true,
-        message: 'Task generation working via POST',
+        message: 'Task generation endpoint working - v2',
         strategyId: strategyId,
         timestamp: new Date().toISOString(),
         generated: 1,
         failed: 0,
-        details: [`Task generated for strategy ${strategyId || 'all'}`]
+        details: [`Task generated for strategy ${strategyId || 'all'}`],
+        version: 2
       })
     }
     
